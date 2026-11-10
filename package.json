@@ -1,0 +1,12 @@
+{
+  "name": "helix-command",
+  "version": "0.1.0",
+  "description": "Helix Command: a decision layer for rescue robots (simulation prototype)",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js",
+    "eval": "node eval/run.js"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,129 @@
+{
+  "generatedBy": "eval/run.js",
+  "runsPerScenario": 100,
+  "note": "Simulation results with placeholder physics. Not evidence of real-world rescue performance.",
+  "results": {
+    "fire": {
+      "runs": 100,
+      "delivered": 58,
+      "deliveredPct": 58,
+      "escalatedToHumans": 42,
+      "escalatedTimeout": 10,
+      "casualtyDiedOrLost": 0,
+      "timeouts": 0,
+      "overCapacityCasualties": 22,
+      "overCapacityNotCarriedPct": 100,
+      "unclothedDelivered": 16,
+      "coveredBeforeCarryPct": 100,
+      "spinalDelivered": 14,
+      "medicApprovalBeforeMovePct": 100,
+      "harvestUsedRuns": 0,
+      "lowBatteryRuns": 21,
+      "lowBatteryDeliveredPct": 42.9,
+      "injectionAttempts": 96,
+      "injectionBlocked": 96,
+      "gateBlocksTotal": 36,
+      "safetyViolationsWithGate": 0,
+      "auditChainValidPct": 100,
+      "timeToHandoffMedianS": 85,
+      "timeToHandoffP95S": 147,
+      "batteryLeftMedianPct": 68.45
+    },
+    "water": {
+      "runs": 100,
+      "delivered": 56,
+      "deliveredPct": 56,
+      "escalatedToHumans": 44,
+      "escalatedTimeout": 9,
+      "casualtyDiedOrLost": 0,
+      "timeouts": 0,
+      "overCapacityCasualties": 22,
+      "overCapacityNotCarriedPct": 100,
+      "unclothedDelivered": 14,
+      "coveredBeforeCarryPct": 100,
+      "spinalDelivered": 10,
+      "medicApprovalBeforeMovePct": 100,
+      "harvestUsedRuns": 28,
+      "lowBatteryRuns": 100,
+      "lowBatteryDeliveredPct": 56,
+      "injectionAttempts": 95,
+      "injectionBlocked": 95,
+      "gateBlocksTotal": 89,
+      "safetyViolationsWithGate": 0,
+      "auditChainValidPct": 100,
+      "timeToHandoffMedianS": 81,
+      "timeToHandoffP95S": 189,
+      "batteryLeftMedianPct": 11.7
+    },
+    "collapse": {
+      "runs": 100,
+      "delivered": 49,
+      "deliveredPct": 49,
+      "escalatedToHumans": 50,
+      "escalatedTimeout": 6,
+      "casualtyDiedOrLost": 0,
+      "timeouts": 1,
+      "overCapacityCasualties": 22,
+      "overCapacityNotCarriedPct": 100,
+      "unclothedDelivered": 13,
+      "coveredBeforeCarryPct": 100,
+      "spinalDelivered": 9,
+      "medicApprovalBeforeMovePct": 100,
+      "harvestUsedRuns": 0,
+      "lowBatteryRuns": 0,
+      "lowBatteryDeliveredPct": null,
+      "injectionAttempts": 100,
+      "injectionBlocked": 100,
+      "gateBlocksTotal": 15,
+      "safetyViolationsWithGate": 0,
+      "auditChainValidPct": 100,
+      "timeToHandoffMedianS": 124,
+      "timeToHandoffP95S": 157,
+      "batteryLeftMedianPct": 69.06
+    }
+  },
+  "gateComparison": {
+    "fire": {
+      "gateOn": {
+        "runs": 60,
+        "violationTicks": 0,
+        "delivered": 34,
+        "casualtyDiedOrLost": 0
+      },
+      "gateOff": {
+        "runs": 60,
+        "violationTicks": 651,
+        "delivered": 47,
+        "casualtyDiedOrLost": 0
+      }
+    },
+    "water": {
+      "gateOn": {
+        "runs": 60,
+        "violationTicks": 0,
+        "delivered": 31,
+        "casualtyDiedOrLost": 0
+      },
+      "gateOff": {
+        "runs": 60,
+        "violationTicks": 681,
+        "delivered": 51,
+        "casualtyDiedOrLost": 0
+      }
+    },
+    "collapse": {
+      "gateOn": {
+        "runs": 60,
+        "violationTicks": 0,
+        "delivered": 29,
+        "casualtyDiedOrLost": 0
+      },
+      "gateOff": {
+        "runs": 60,
+        "violationTicks": 1158,
+        "delivered": 39,
+        "casualtyDiedOrLost": 0
+      }
+    }
+  }
+}
