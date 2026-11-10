@@ -6,6 +6,8 @@ A rescue unit in simulation finds, verifies and carries a casualty (up to about 
 
 > **Honest status.** This is a **simulation prototype**. It is not a certified rescue system, uses synthetic data only, and all physics and energy numbers are placeholders. The electrical-safety limits are placeholders for experts to set. Nothing here shows that a real robot can do this.
 
+Simplifications: the fire scenario is a single floor plan with six rooms and two exits (the planning documents mention three floors); sensors, heat, smoke and current are toy models; the unit has global knowledge of temperature (as from a building fire-alarm system).
+
 ## Run it
 
 ```bash
