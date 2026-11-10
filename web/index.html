@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helix Command</title>
+<link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">HX</span><div><h1>Helix Command</h1><p>The decision layer for rescue robots</p></div></div>
+  <div class="banner" id="banner">SIMULATION ONLY &middot; placeholder physics &middot; not a certified rescue system</div>
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main>
+  <section class="left">
+    <div class="statusbar">
+      <div><span class="k">State</span><b id="stState">-</b></div>
+      <div><span class="k">Time</span><b id="stTime">0s</b></div>
+      <div><span class="k">Outcome</span><b id="stOutcome" class="badge">running</b></div>
+    </div>
+    <div class="canvaswrap"><canvas id="map" width="880" height="484"></canvas><div class="legend" id="legend"></div></div>
+    <div class="controls">
+      <button id="btnPlay">Pause</button>
+      <button id="btnStep">Step</button>
+      <label>Speed <select id="selSpeed"><option value="1">1x</option><option value="2" selected>2x</option><option value="5">5x</option><option value="12">12x</option></select></label>
+      <label>Seed <input id="inSeed" type="number" value="3" min="1" max="9999"></label>
+      <label>Casualty kg <input id="inWeight" type="range" min="45" max="105" value="75"><output id="outWeight">75</output></label>
+      <button id="btnRestart" class="primary">Restart</button>
+    </div>
+    <div class="controls">
+      <label class="chk"><input type="checkbox" id="chkGate" checked> Safety gate ON</label>
+      <label class="chk"><input type="checkbox" id="chkAuto" checked> Commander auto-approves</label>
+      <label class="chk"><input type="checkbox" id="chkTruth"> Show ground truth</label>
+      <button id="btnInject">Inject poisoned report</button>
+      <button id="btnAfter" style="display:none">Aftershock</button>
+    </div>
+  </section>
+
+  <aside class="right">
+    <div class="card" id="cardEnergy">
+      <h2>Energy</h2>
+      <div class="bar"><div id="batFill"></div><div id="batReserve" title="reserve"></div></div>
+      <div class="row"><span id="batText">-</span><span id="harvText">harvested 0%</span></div>
+      <p class="hint" id="energyHint">Harvest is a range extender only. Parameters are assumptions.</p>
+    </div>
+    <div class="card">
+      <h2>Casualty</h2>
+      <div id="casualty" class="mono">Not found yet</div>
+    </div>
+    <div class="card">
+      <h2>Approvals <small>commander / medic</small></h2>
+      <div id="approvals" class="list"><p class="hint">No pending approvals.</p></div>
+    </div>
+    <div class="card grow">
+      <h2>Agent trace</h2>
+      <div id="trace" class="trace"></div>
+    </div>
+    <div class="card">
+      <h2>Safety gate <small id="gateStats"></small></h2>
+      <div id="gateLog" class="list small"></div>
+    </div>
+    <div class="card">
+      <h2>Detections</h2>
+      <div id="cands" class="list small"></div>
+    </div>
+    <div class="card">
+      <h2>Audit log <small id="auditInfo"></small></h2>
+      <div class="row"><button id="btnVerify">Verify chain</button><button id="btnTamper">Tamper test</button><button id="btnReport">Incident report</button></div>
+      <p class="hint" id="auditMsg"></p>
+    </div>
+  </aside>
+</main>
+<footer>Prototype for a hackathon. Not a certified rescue system. All data is synthetic. Energy-harvest parameters are assumptions; electrical-safety limits are placeholders for experts to set.</footer>
+<script type="module" src="/web/app.js"></script>
+</body>
+</html>

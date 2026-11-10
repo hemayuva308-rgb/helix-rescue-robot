@@ -105,7 +105,7 @@ export class Simulation {
       this.gateStats.blocked++;
       this.gateBlocksByRule[res.rule] = (this.gateBlocksByRule[res.rule] ?? 0) + 1;
     } else this.gateStats.approvals++;
-    if (!quiet && (res.decision !== 'ALLOW' || action.type !== 'move')) {
+    if (!quiet && (res.decision !== 'ALLOW' || (action.type !== 'move' && action.type !== 'harvest'))) {
       const g = { t: this.t, action: action.type, decision: res.decision, rule: res.rule, reason: res.reason };
       this.gateLog.push(g);
       if (this.gateLog.length > 200) this.gateLog.shift();

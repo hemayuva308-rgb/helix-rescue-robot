@@ -1,0 +1,802 @@
+[
+  {
+    "id": "P001",
+    "age": "adult",
+    "weightKg": 65,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P002",
+    "age": "adult",
+    "weightKg": 84,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P003",
+    "age": "adult",
+    "weightKg": 81,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": true
+  },
+  {
+    "id": "P004",
+    "age": "adult",
+    "weightKg": 70,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P005",
+    "age": "adult",
+    "weightKg": 64,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P006",
+    "age": "elderly",
+    "weightKg": 56,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P007",
+    "age": "elderly",
+    "weightKg": 79,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P008",
+    "age": "adult",
+    "weightKg": 67,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P009",
+    "age": "child",
+    "weightKg": 36,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P010",
+    "age": "child",
+    "weightKg": 23,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P011",
+    "age": "adult",
+    "weightKg": 59,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P012",
+    "age": "elderly",
+    "weightKg": 69,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P013",
+    "age": "elderly",
+    "weightKg": 68,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P014",
+    "age": "adult",
+    "weightKg": 59,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P015",
+    "age": "adult",
+    "weightKg": 59,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P016",
+    "age": "child",
+    "weightKg": 42,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P017",
+    "age": "child",
+    "weightKg": 24,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P018",
+    "age": "child",
+    "weightKg": 41,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P019",
+    "age": "child",
+    "weightKg": 43,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P020",
+    "age": "adult",
+    "weightKg": 91,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P021",
+    "age": "adult",
+    "weightKg": 75,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P022",
+    "age": "adult",
+    "weightKg": 86,
+    "conscious": false,
+    "unclothed": true,
+    "spinal": false
+  },
+  {
+    "id": "P023",
+    "age": "child",
+    "weightKg": 19,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": false
+  },
+  {
+    "id": "P024",
+    "age": "elderly",
+    "weightKg": 53,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P025",
+    "age": "child",
+    "weightKg": 28,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P026",
+    "age": "child",
+    "weightKg": 41,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P027",
+    "age": "adult",
+    "weightKg": 74,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": true
+  },
+  {
+    "id": "P028",
+    "age": "child",
+    "weightKg": 22,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P029",
+    "age": "adult",
+    "weightKg": 59,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P030",
+    "age": "adult",
+    "weightKg": 52,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P031",
+    "age": "adult",
+    "weightKg": 76,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P032",
+    "age": "adult",
+    "weightKg": 70,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P033",
+    "age": "adult",
+    "weightKg": 71,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": true
+  },
+  {
+    "id": "P034",
+    "age": "adult",
+    "weightKg": 54,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P035",
+    "age": "adult",
+    "weightKg": 63,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P036",
+    "age": "adult",
+    "weightKg": 61,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P037",
+    "age": "elderly",
+    "weightKg": 52,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P038",
+    "age": "adult",
+    "weightKg": 65,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P039",
+    "age": "adult",
+    "weightKg": 89,
+    "conscious": false,
+    "unclothed": true,
+    "spinal": false
+  },
+  {
+    "id": "P040",
+    "age": "adult",
+    "weightKg": 55,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": true
+  },
+  {
+    "id": "P041",
+    "age": "adult",
+    "weightKg": 65,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P042",
+    "age": "adult",
+    "weightKg": 79,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P043",
+    "age": "adult",
+    "weightKg": 67,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P044",
+    "age": "child",
+    "weightKg": 29,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": false
+  },
+  {
+    "id": "P045",
+    "age": "elderly",
+    "weightKg": 77,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P046",
+    "age": "elderly",
+    "weightKg": 50,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P047",
+    "age": "adult",
+    "weightKg": 99,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P048",
+    "age": "adult",
+    "weightKg": 86,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P049",
+    "age": "elderly",
+    "weightKg": 80,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P050",
+    "age": "adult",
+    "weightKg": 66,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P051",
+    "age": "child",
+    "weightKg": 44,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P052",
+    "age": "elderly",
+    "weightKg": 50,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P053",
+    "age": "child",
+    "weightKg": 27,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P054",
+    "age": "elderly",
+    "weightKg": 54,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": false
+  },
+  {
+    "id": "P055",
+    "age": "adult",
+    "weightKg": 91,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P056",
+    "age": "child",
+    "weightKg": 28,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P057",
+    "age": "child",
+    "weightKg": 32,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P058",
+    "age": "adult",
+    "weightKg": 58,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": true
+  },
+  {
+    "id": "P059",
+    "age": "adult",
+    "weightKg": 56,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": false
+  },
+  {
+    "id": "P060",
+    "age": "adult",
+    "weightKg": 69,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": true
+  },
+  {
+    "id": "P061",
+    "age": "adult",
+    "weightKg": 75,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P062",
+    "age": "adult",
+    "weightKg": 96,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P063",
+    "age": "adult",
+    "weightKg": 60,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P064",
+    "age": "adult",
+    "weightKg": 77,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P065",
+    "age": "child",
+    "weightKg": 36,
+    "conscious": false,
+    "unclothed": true,
+    "spinal": false
+  },
+  {
+    "id": "P066",
+    "age": "elderly",
+    "weightKg": 52,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P067",
+    "age": "elderly",
+    "weightKg": 65,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P068",
+    "age": "child",
+    "weightKg": 38,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P069",
+    "age": "adult",
+    "weightKg": 61,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P070",
+    "age": "adult",
+    "weightKg": 80,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P071",
+    "age": "child",
+    "weightKg": 28,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P072",
+    "age": "adult",
+    "weightKg": 77,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P073",
+    "age": "adult",
+    "weightKg": 92,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P074",
+    "age": "child",
+    "weightKg": 42,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P075",
+    "age": "adult",
+    "weightKg": 71,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P076",
+    "age": "adult",
+    "weightKg": 100,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P077",
+    "age": "adult",
+    "weightKg": 79,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P078",
+    "age": "elderly",
+    "weightKg": 57,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P079",
+    "age": "adult",
+    "weightKg": 76,
+    "conscious": false,
+    "unclothed": true,
+    "spinal": false
+  },
+  {
+    "id": "P080",
+    "age": "adult",
+    "weightKg": 93,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P081",
+    "age": "adult",
+    "weightKg": 61,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P082",
+    "age": "adult",
+    "weightKg": 97,
+    "conscious": false,
+    "unclothed": true,
+    "spinal": false
+  },
+  {
+    "id": "P083",
+    "age": "adult",
+    "weightKg": 59,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P084",
+    "age": "adult",
+    "weightKg": 100,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": false
+  },
+  {
+    "id": "P085",
+    "age": "elderly",
+    "weightKg": 83,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P086",
+    "age": "adult",
+    "weightKg": 88,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P087",
+    "age": "adult",
+    "weightKg": 54,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P088",
+    "age": "adult",
+    "weightKg": 95,
+    "conscious": true,
+    "unclothed": true,
+    "spinal": false
+  },
+  {
+    "id": "P089",
+    "age": "adult",
+    "weightKg": 57,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P090",
+    "age": "elderly",
+    "weightKg": 54,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P091",
+    "age": "elderly",
+    "weightKg": 57,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P092",
+    "age": "elderly",
+    "weightKg": 58,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P093",
+    "age": "adult",
+    "weightKg": 65,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P094",
+    "age": "adult",
+    "weightKg": 55,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P095",
+    "age": "adult",
+    "weightKg": 59,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P096",
+    "age": "adult",
+    "weightKg": 71,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P097",
+    "age": "adult",
+    "weightKg": 68,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": false
+  },
+  {
+    "id": "P098",
+    "age": "adult",
+    "weightKg": 97,
+    "conscious": false,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P099",
+    "age": "adult",
+    "weightKg": 61,
+    "conscious": true,
+    "unclothed": false,
+    "spinal": true
+  },
+  {
+    "id": "P100",
+    "age": "adult",
+    "weightKg": 60,
+    "conscious": false,
+    "unclothed": true,
+    "spinal": true
+  }
+]

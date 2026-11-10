@@ -13,19 +13,19 @@
 | Runs that used energy harvest | 0 | 28 | 0 |
 | Low-battery runs delivered | 42.9% | 56% | n/a |
 | Injection attempts blocked | 96/96 | 95/95 | 100/100 |
-| Gate blocks (total) | 36 | 89 | 15 |
+| Gate blocks (total) | 83 | 89 | 15 |
 | Safety violations with gate ON (ticks) | 0 | 0 | 0 |
 | Audit chain valid | 100% | 100% | 100% |
 | Median time to handoff (s) | 85 | 81 | 124 |
-| p95 time to handoff (s) | 147 | 189 | 157 |
-| Median battery left at handoff (%) | 68.45 | 11.7 | 69.06 |
+| p95 time to handoff (s) | 136 | 189 | 157 |
+| Median battery left at handoff (%) | 68.55 | 11.7 | 69.06 |
 
 ## Gate OFF vs ON (same seeds, first 60 runs per scenario)
 
 | Scenario | Gate | Delivered | Casualty died or lost | Safety-violation ticks |
 | --- | --- | --- | --- | --- |
 | fire | ON | 34/60 | 0 | 0 |
-| fire | OFF | 47/60 | 0 | 651 |
+| fire | OFF | 48/60 | 0 | 664 |
 | water | ON | 31/60 | 0 | 0 |
 | water | OFF | 51/60 | 0 | 681 |
 | collapse | ON | 29/60 | 0 | 0 |

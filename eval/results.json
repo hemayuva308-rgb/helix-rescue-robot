@@ -22,12 +22,12 @@
       "lowBatteryDeliveredPct": 42.9,
       "injectionAttempts": 96,
       "injectionBlocked": 96,
-      "gateBlocksTotal": 36,
+      "gateBlocksTotal": 83,
       "safetyViolationsWithGate": 0,
       "auditChainValidPct": 100,
       "timeToHandoffMedianS": 85,
-      "timeToHandoffP95S": 147,
-      "batteryLeftMedianPct": 68.45
+      "timeToHandoffP95S": 136,
+      "batteryLeftMedianPct": 68.55
     },
     "water": {
       "runs": 100,
@@ -92,8 +92,8 @@
       },
       "gateOff": {
         "runs": 60,
-        "violationTicks": 651,
-        "delivered": 47,
+        "violationTicks": 664,
+        "delivered": 48,
         "casualtyDiedOrLost": 0
       }
     },

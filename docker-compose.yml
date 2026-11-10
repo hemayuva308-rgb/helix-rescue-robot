@@ -1,0 +1,12 @@
+services:
+  helix:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      # Optional: real Telegram alerts (otherwise alerts are logged only)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      # Optional: advisory LLM briefing (OpenAI-compatible endpoint). It never reaches the safety gate.
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
