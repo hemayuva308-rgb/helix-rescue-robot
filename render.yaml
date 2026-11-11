@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: helix-command
+    runtime: node
+    plan: free
+    buildCommand: "echo no build step"
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 8080

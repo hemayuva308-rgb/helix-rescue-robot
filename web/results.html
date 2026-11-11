@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helix Command: results</title>
+<link rel="stylesheet" href="/web/style.css">
+<style>
+  .wrap{max-width:980px;margin:0 auto;padding:20px}
+  table{width:100%;border-collapse:collapse;margin:10px 0 24px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line)}
+  th{color:var(--mute);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  td.num{font-variant-numeric:tabular-nums}
+  .good{color:var(--green)}.bad{color:var(--red)}
+  h2{margin-top:28px}
+  a{color:var(--blue)}
+  .note{color:var(--mute);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">HX</span><div><h1>Helix Command</h1><p>Evaluation results (simulation)</p></div></div>
+  <div class="tabs"><a class="tab" href="/">&larr; Back to the dashboard</a></div>
+</header>
+<div class="wrap">
+  <p class="note" id="meta">Loading...</p>
+  <h2>Randomised runs</h2>
+  <div id="main"></div>
+  <h2>Safety gate OFF vs ON</h2>
+  <p class="note">Same seeds, first 60 runs per scenario. A violation tick is one simulated second in which a safety invariant was broken (casualty carried through a zone above the carry temperature limit, carried uncovered, carried over the payload limit, towed without flotation, or moved against a spinal-injury flag).</p>
+  <div id="compare"></div>
+  <p class="note">Reproduce: <code>npm run eval</code>. All physics and energy numbers are placeholders. These figures describe the simulator, not real rescue performance. The gate costs throughput by design: a naive robot with no gate delivers more casualties and breaks safety rules while doing it.</p>
+</div>
+<script type="module">
+const r = await (await fetch('/eval/results.json')).json();
+document.getElementById('meta').textContent = `${r.runsPerScenario} randomised runs per scenario. ${r.note}`;
+const S = ['fire', 'water', 'collapse'];
+const rows = [
+  ['Casualty delivered to a safe zone', (x) => x.deliveredPct + '%'],
+  ['Escalated to the human team', (x) => x.escalatedToHumans],
+  ['Casualty died or lost', (x) => x.casualtyDiedOrLost],
+  ['Over-capacity casualties not carried solo', (x) => x.overCapacityNotCarriedPct + '%'],
+  ['Unclothed casualties covered before carry', (x) => x.coveredBeforeCarryPct + '%'],
+  ['Spinal cases with medic approval before moving', (x) => x.medicApprovalBeforeMovePct + '%'],
+  ['Runs that used energy harvest', (x) => x.harvestUsedRuns],
+  ['Low-battery runs delivered', (x) => (x.lowBatteryDeliveredPct ?? 'n/a') + (x.lowBatteryDeliveredPct != null ? '%' : '')],
+  ['Injection attempts blocked', (x) => `${x.injectionBlocked}/${x.injectionAttempts}`],
+  ['Gate blocks (total)', (x) => x.gateBlocksTotal],
+  ['Safety violations with the gate ON (ticks)', (x) => x.safetyViolationsWithGate],
+  ['Audit chain valid', (x) => x.auditChainValidPct + '%'],
+  ['Median time to handoff (s)', (x) => x.timeToHandoffMedianS],
+  ['p95 time to handoff (s)', (x) => x.timeToHandoffP95S],
+  ['Median battery left at handoff (%)', (x) => x.batteryLeftMedianPct],
+];
+document.getElementById('main').innerHTML = `<table><tr><th>Metric</th>${S.map((s) => `<th>${s}</th>`).join('')}</tr>${rows.map(([l, f]) => `<tr><td>${l}</td>${S.map((s) => `<td class="num">${f(r.results[s]) ?? 'n/a'}</td>`).join('')}</tr>`).join('')}</table>`;
+document.getElementById('compare').innerHTML = `<table><tr><th>Scenario</th><th>Gate</th><th>Delivered</th><th>Casualty died or lost</th><th>Safety-violation ticks</th></tr>${S.flatMap((s) => ['gateOn', 'gateOff'].map((g) => { const c = r.gateComparison[s][g]; return `<tr><td>${s}</td><td>${g === 'gateOn' ? 'ON' : 'OFF'}</td><td class="num">${c.delivered}/${c.runs}</td><td class="num">${c.casualtyDiedOrLost}</td><td class="num ${c.violationTicks ? 'bad' : 'good'}">${c.violationTicks}</td></tr>`; })).join('')}</table>`;
+</script>
+</body>
+</html>
