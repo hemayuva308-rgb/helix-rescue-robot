@@ -63,6 +63,15 @@ export function gate(sim, action) {
       return ALLOW();
     }
     case 'harvest': {
+      if (action.mode === 'transit') { // trickle charging while moving through flowing water: sealed turbine, no electrical path into the water or the casualty
+        if (sim.scenario !== 'water') return BLOCK('R7_no_source', 'transit harvesting is for flowing water only');
+        if (action.electrode) return BLOCK('R7_electrode', 'electrode-type harvesting is forbidden: sealed generators only');
+        if (sim.leakageMa > p.leakageLimitMa) return BLOCK('R7_leakage', `simulated leakage ${sim.leakageMa.toFixed(1)}mA above placeholder limit ${p.leakageLimitMa}mA: cutoff`);
+        const cur = sim.currentMagAt(r.x, r.y);
+        if (cur < p.harvestMinCurrent) return BLOCK('R7_no_flow', 'current too weak for a useful trickle');
+        if (cur > p.currentLimit || sim.depthAt(r.x, r.y) > p.depthLimit) return BLOCK('R8_current', 'water too strong or deep');
+        return ALLOW();
+      }
       if (r.carrying) return BLOCK('R7_harvest_casualty', 'never harvest while a casualty is aboard');
       if (sim.casualtyNear(r, p.harvestSafeDistance)) return BLOCK('R7_harvest_casualty', `a casualty is within ${p.harvestSafeDistance} cells`);
       if (action.electrode) return BLOCK('R7_electrode', 'electrode-type harvesting is forbidden: sealed generators only');

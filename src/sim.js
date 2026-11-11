@@ -55,6 +55,8 @@ export class Simulation {
       blankets: Math.max(1, sc.casualties.length), progress: 0, busy: 0, busyAction: null, onDone: null, trail: [] };
     this.startBattery = startBattery;
     this.multi = sc.casualties.length > 1;
+    this.transit = scenario === 'water' && !!opts.transitHarvest; // trickle-charge while moving through flowing water (sealed turbine)
+    this.transitTotal = 0; this.lastTransitT = -1;
     this.sweeps = 0;
     this.casualties = sc.casualties.map((c) => ({ health: c.healthStart ?? 100, alive: true, covered: false, aboard: false, delivered: false, lost: false,
       fx: c.x, fy: c.y, ...c }));
@@ -474,12 +476,29 @@ export class Simulation {
       const loadKg = r.carrying ? r.carrying.weightKg + this.params.stretcherKg : 0;
       r.battery -= this.moveCost(loadKg, next.x, next.y, next.y - r.y);
       r.x = next.x; r.y = next.y;
+      if (this.transit) this.transitTick();
       if (r.carrying) { r.carrying.fx = r.x; r.carrying.fy = r.y; r.carrying.x = r.x; r.carrying.y = r.y; }
       m.path.shift(); r.progress -= 1;
       r.trail.push({ x: r.x, y: r.y }); if (r.trail.length > 60) r.trail.shift();
       this.visited[this.idx(r.x, r.y)] = 1;
     }
     return m.path.length ? 'moved' : 'arrived';
+  }
+
+  // Trickle charge while moving in flowing water, also while towing a casualty. Gate-checked on every tick; stops at once on a leakage fault.
+  transitTick() {
+    const r = this.robot, cur = this.currentMagAt(r.x, r.y);
+    const g = this.runGate({ type: 'harvest', mode: 'transit', electrode: false }, true);
+    if (g.decision !== 'ALLOW') return;
+    const gain = this.params.harvestWaterRate * cur * cur * 1.0;
+    r.battery = Math.min(100, r.battery + gain); this.harvestedTotal += gain; this.transitTotal += gain; this.lastTransitT = this.t;
+  }
+
+  transitGain(path) { // conservative estimate of the charge picked up along a path (60% of the model, about 0.7 cells per second)
+    if (!this.transit) return 0;
+    let e = 0; const p = this.params;
+    for (const c of path) { const cur = this.currentMagAt(c.x, c.y); if (cur >= p.harvestMinCurrent && cur <= p.currentLimit) e += p.harvestWaterRate * cur * cur * 1.0 / 0.7; }
+    return 0.6 * e;
   }
 
   // ------------------------------------------------------------------ mission agent
@@ -609,7 +628,9 @@ export class Simulation {
     if (!out) { this.escalate('No safe carry route to a safe zone for the casualty'); return; }
     const energy = this.pathEnergy(toC.path, 0) + this.pathEnergy(out.path, est + p.stretcherKg) + 2.5;
     m.energyNeeded = energy;
-    const g = this.runGate({ type: 'commit_extraction', weightKgEstimate: est, energyNeeded: energy });
+    const gain = this.transitGain(toC.path) + this.transitGain(out.path);
+    const g = this.runGate({ type: 'commit_extraction', weightKgEstimate: est, energyNeeded: energy - gain });
+    if (gain > 0.05 && g.decision !== 'BLOCK') this.emit('Mission', 'info', `Energy plan: needs ${energy.toFixed(1)}%, expects to pick up about ${gain.toFixed(1)}% from the current on the way (sealed turbine, checked by the gate every second)`);
     if (g.decision === 'BLOCK') {
       this.emit('Gate', 'block', `${g.rule}: ${g.reason}`);
       if (g.rule === 'R2_payload') { this.escalate(`Casualty about ${est.toFixed(0)} kg is over the ${p.maxSoloCasualtyKg} kg solo limit: refusing solo lift, human team requested`); return; }
@@ -835,7 +856,7 @@ export class Simulation {
       t: this.t, battery: +this.robot.battery.toFixed(2), startBattery: +this.startBattery.toFixed(2), harvested: +this.harvestedTotal.toFixed(2),
       weightKg: c.weightKg, age: c.age, unclothed: c.unclothed, covered: c.covered, spinal: c.spinal, health: +c.health.toFixed(1),
       gateStats: this.gateStats, harvestUsed: this.harvestUsed, humanApprovals: [...this.approvals], injection: this.injection, violations: { ...this.violations }, humanTeamRequested: this.humanTeamRequested,
-      auditOk: this.audit.verify().ok,
+      auditOk: this.audit.verify().ok, transitHarvested: +this.transitTotal.toFixed(2),
       casualtyCount: this.casualties.length, delivered: this.casualties.filter((x) => x.delivered).length, referred: this.casualties.filter((x) => x.referred).length, died: this.casualties.filter((x) => !x.alive || x.lost).length,
     };
   }

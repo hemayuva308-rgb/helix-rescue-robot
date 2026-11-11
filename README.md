@@ -53,6 +53,8 @@ The dashboard shows a live **Robot ratings** card. Assumed limits: 150 °C when 
 ### Energy
 Harvest is a **range extender**, not a power source. Water harvest works only in moving water (a robot cannot gain energy from its own motion). Heat harvest is weak and rarely usable in the fire scenario: the evaluation shows that. All rates are assumptions in `src/scenarios.js`.
 
+**Charging while moving (water, option "Charge while moving"):** the unit trickle-charges from the current while it swims to a casualty and while it tows one, so it rarely has to stop just to charge. A sealed turbine is assumed: no electrical path into the water or the casualty. The gate allows it only with leakage under the limit, in flowing but not too strong or deep water, and never with electrode-type harvesting; a leakage fault cuts it off at once (tested). The rate is a placeholder assumption and real hardware needs electrical-safety testing before any human contact. The evaluation table above was produced without this option.
+
 ### Audit log
 Every event and gate decision is written to a SHA-256 hash chain (`src/audit.js`). The UI has a "Tamper test" that edits a copy and shows the chain breaking.
 

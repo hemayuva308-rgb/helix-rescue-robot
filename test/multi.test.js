@@ -42,3 +42,17 @@ test('multi-casualty: four people in the fire scenario, all delivered (seed 26)'
   assert.equal(r.delivered, 4);
   assert.equal(Object.values(r.violations).reduce((a, b) => a + b, 0), 0);
 });
+
+test('water: charging while moving never breaks a safety rule and a leakage fault cuts it off', () => {
+  let viol = 0;
+  for (let seed = 1; seed <= 12; seed++) {
+    const s = new Simulation('water', { seed, autoCommander: true, commanderDelay: 4, casualtyCount: 3, casualtyWeight: 75, transitHarvest: true });
+    const r = s.run(900);
+    viol += Object.values(r.violations).reduce((a, b) => a + b, 0);
+    assert.equal(r.auditOk, true);
+  }
+  assert.equal(viol, 0);
+  const faulty = new Simulation('water', { seed: 19, autoCommander: true, commanderDelay: 4, casualtyCount: 3, casualtyWeight: 75, transitHarvest: true, leakageFaultAt: 1 });
+  for (let i = 0; i < 10; i++) faulty.step();
+  assert.equal(faulty.transitTotal, 0, 'no charging while the leakage fault is active');
+});
