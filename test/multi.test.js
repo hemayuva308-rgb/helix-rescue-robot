@@ -35,3 +35,10 @@ test('single-casualty behaviour is unchanged by default', () => {
   assert.equal(s.multi, false);
   assert.equal(s.casualties.length, 1);
 });
+
+test('multi-casualty: four people in the fire scenario, all delivered (seed 26)', () => {
+  const r = run('fire', 26, 4);
+  assert.equal(r.outcome, 'delivered');
+  assert.equal(r.delivered, 4);
+  assert.equal(Object.values(r.violations).reduce((a, b) => a + b, 0), 0);
+});

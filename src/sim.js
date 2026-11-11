@@ -511,15 +511,17 @@ export class Simulation {
   searchBonus(w) {
     if (!this.multi || this.scenario !== 'fire') return 0;
     let dmin = Infinity;
-    for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) if (this.fireI[this.idx(x, y)] > 0.3) dmin = Math.min(dmin, Math.hypot(x - w.x, y - w.y));
-    return Number.isFinite(dmin) ? Math.max(0, 30 - 2 * dmin) : 0;
+    for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) if (this.fireI[this.idx(x, y)] > 0.02) dmin = Math.min(dmin, Math.hypot(x - w.x, y - w.y));
+    return Number.isFinite(dmin) && dmin >= 4 ? Math.max(0, 60 - 4 * (dmin - 4)) : 0; // rooms inside the flames cannot be entered, so no bonus there
   }
 
   verifiedCandidate() {
     const list = this.candidates.filter((c) => c.status === 'verified' && !c.handled);
     if (!this.multi || list.length < 2) return list[0];
     const scored = list.map((cand) => { const k = this.casualtyFor(cand); return { cand, k, tt: k ? this.timeToHazard(k) : Infinity }; }).sort((a, b) => a.tt - b.tt);
-    if (scored[0].k) this.emit('Mission', 'info', `Triage: ${scored.map((s) => `${s.k?.id} (${Number.isFinite(s.tt) ? s.tt.toFixed(0) + 's' : 'stable'})`).join(', ')}: most critical first`);
+    const seen = new Set(), uniq = scored.filter((s) => s.k && !seen.has(s.k.id) && seen.add(s.k.id));
+    const msg = `Triage: ${uniq.map((s) => `${s.k.id} (${Number.isFinite(s.tt) ? s.tt.toFixed(0) + 's left' : 'stable'})`).join(', ')}: most critical first`;
+    if (uniq.length > 1 && msg !== this._triageMsg) { this._triageMsg = msg; this.emit('Mission', 'info', msg); }
     return scored[0].cand;
   }
 
@@ -738,6 +740,7 @@ export class Simulation {
       return;
     }
     this.startAction('load', () => {
+      if (this.multi && this.gateOn && this.tempAt(r.x, r.y) > this.params.carryTempLimit * 0.9) { this.skipCasualty(c, `the spot is now ${this.tempAt(r.x, r.y).toFixed(0)}C, too hot to lift safely (carry limit ${this.params.carryTempLimit}C): fire crew requested`); return; }
       c.aboard = true; r.carrying = c; c.x = r.x; c.y = r.y; c.fx = r.x; c.fy = r.y;
       if (c.spinal && !this.approvals.has('medic:' + c.id)) this.violations.spinalMoved++;
       const measured = c.weightKg;

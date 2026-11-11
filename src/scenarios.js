@@ -44,7 +44,7 @@ function buildFire(opts, rng) {
     decoys: [{ x: rooms[decoyRoom].x, y: rooms[decoyRoom].y, kind: 'heater' }],
     safeZones: [{ x0: 0, y0: 8, x1: 3, y1: 12 }, { x0: 36, y0: 8, x1: 39, y1: 12 }],
     waypoints: [rooms.A, rooms.B, rooms.C, rooms.D, rooms.E, rooms.F, { x: 12, y: 10 }, { x: 28, y: 10 }],
-    fire: { origins: [fireAt], spread: 0.1, growTicks: 18, burnTicks: 260 },
+    fire: { origins: [fireAt], spread: (opts.casualtyCount ?? 1) > 1 ? 0.06 : 0.1, growTicks: 18, burnTicks: 260 },
     cloth: [{ x: rooms[cRoom].x - 3, y: rooms[cRoom].y }],
     reports: [
       { t: 6, source: 'citizen', text: 'Caller thinks someone is in the middle bottom room', hint: { ...rooms.E } },

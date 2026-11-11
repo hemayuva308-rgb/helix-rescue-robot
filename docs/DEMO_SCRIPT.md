@@ -4,7 +4,7 @@ Record the live dashboard (browser, full screen). Voice-over in English. Windows
 
 Before recording: open the app, untick **Commander auto-approves**, set speed to 2x, leave **Show ground truth** off.
 
-> Multi-casualty demo: leave **People = 3** and use the default seeds (fire 60, water 19, collapse 4). The unit rescues all three one after another, most critical first, then stops when the area is clear. The timed script below shows one casualty, so set **People = 1** for it (fire seed 10, water seed 1).
+> Multi-casualty demo: leave **People = 3** and use the default seeds (fire 60, water 19, collapse 4; for People = 4 in the fire scenario use seed 26). The unit rescues all three one after another, most critical first, then stops when the area is clear. The timed script below shows one casualty, so set **People = 1** for it (fire seed 10, water seed 1).
 
 | Time | On screen | Say |
 | --- | --- | --- |
