@@ -119,3 +119,25 @@ test('self test reports the provider status and error text without the key', asy
   assert.equal(out.ok, false); assert.equal(out.results.length, 2); assert.match(out.results[0].body, /Invalid API key/);
   assert.ok(!JSON.stringify(out).includes('topsecret'));
 });
+
+test('Responses-style provider (api.meta.ai): request shape, answer extraction, system-role retry', async () => {
+  const { extractText } = await import('../src/llm.js');
+  assert.equal(extractText({ output: [{ type: 'reasoning', summary: [] }, { type: 'message', content: [{ type: 'output_text', text: 'Hello operator.' }] }] }), 'Hello operator.');
+  assert.equal(extractText({ output_text: 'direct' }), 'direct');
+  assert.equal(extractText({ choices: [{ message: { content: '<think>x</think>chat style' } }] }), 'chat style');
+  const seen = [];
+  const srv = http.createServer(async (req, res) => { let b = ''; for await (const c of req) b += c; const j = JSON.parse(b); seen.push({ url: req.url, auth: req.headers.authorization, j }); if (j.input.some((m) => m.role === 'system')) { res.writeHead(400, { 'content-type': 'application/json' }); res.end('{"error":"system role not allowed"}'); return; } res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ output: [{ type: 'message', content: [{ type: 'output_text', text: 'Unit A is searching.' }] }] })); });
+  await new Promise((r) => srv.listen(0, r));
+  const env = { LLM_BASE_URL: `http://127.0.0.1:${srv.address().port}/v1`, LLM_API_KEY: 'k', LLM_MODEL: 'muse-wonder-1.0', LLM_API: 'responses' };
+  const out = await handle('brief', { time: 3 }, env, 'ip40');
+  srv.close();
+  assert.equal(out.body.mode, 'llm'); assert.equal(out.body.text, 'Unit A is searching.');
+  assert.equal(seen[0].url, '/v1/responses'); assert.equal(seen[0].auth, 'Bearer k'); assert.equal(seen[0].j.model, 'muse-wonder-1.0');
+  assert.equal(seen[0].j.input[0].content[0].type, 'input_text');
+  assert.equal(seen.length, 2); assert.ok(seen[1].j.input.every((m) => m.role === 'user'));
+});
+test('api.meta.ai is detected as a Responses-style provider', async () => {
+  const { status } = await import('../src/llm.js');
+  assert.equal(status({ LLM_BASE_URL: 'https://api.meta.ai/v1', LLM_API_KEY: 'k', LLM_MODEL: 'muse-wonder-1.0' }).providers[0].api, 'responses');
+  assert.equal(status({ LLM_BASE_URL: 'https://inference.baseten.co/v1', LLM_API_KEY: 'k', LLM_MODEL: 'm' }).providers[0].api, 'chat');
+});

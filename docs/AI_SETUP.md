@@ -28,6 +28,14 @@ LLM_MODEL    = meta-models/muse-spark-open-1026     (use exactly this name: the 
 LLM_API_KEY  = <your key, set only in Vercel or your shell>
 ```
 
+## Meta Model API (Muse), the other hackathon provider
+```
+LLM_BASE_URL = https://api.meta.ai/v1          (the app calls BASE_URL/responses: the OpenAI Responses shape, detected from the host)
+LLM_MODEL    = muse-wonder-1.0                 (the model shown in the Meta console's cURL example; check the Models page for others)
+LLM_API_KEY  = <your Meta key>
+```
+Set `LLM_API=responses` or `LLM_API=chat` to force a shape for any other provider.
+
 ## On Vercel
 Project, Settings, Environment Variables: add the names above (Production), then redeploy. The function is `api/llm.js`.
 

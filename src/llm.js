@@ -21,7 +21,7 @@ const shape = (v) => { const c = clean(v), raw = String(v ?? ''); return { clean
 export function status(env) {
   const ps = providers(env);
   return {
-    configured: ps.length, providers: ps.map((p) => ({ name: p.name, host: new URL(p.base).host, model: p.model })),
+    configured: ps.length, providers: ps.map((p) => ({ name: p.name, host: new URL(p.base).host, model: p.model, api: p.api })),
     missing: ['LLM_BASE_URL', 'LLM_API_KEY', 'LLM_MODEL'].filter((k) => !env[k]),
     seen: Object.keys(env).filter((k) => /llm|baseten|muse/i.test(k)).map((k) => ({ name: k, length: String(env[k]).length, ...(/KEY/.test(k) ? shape(env[k]) : {}) })), // names, lengths and the SHAPE of a key, never values
     deployment: { env: env.VERCEL_ENV ?? 'local', commit: String(env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7), region: env.VERCEL_REGION ?? '' },
@@ -33,23 +33,38 @@ const clean = (v) => String(v ?? '').trim().replace(/^["']+|["']+$/g, '').trim()
 export function providers(env) {
   env = Object.fromEntries(Object.entries(env).map(([k, v]) => [k, /^LLM2?_/.test(k) ? clean(v) : v]));
   const list = [];
-  for (const p of ['LLM', 'LLM2']) if (env[`${p}_BASE_URL`] && env[`${p}_API_KEY`] && env[`${p}_MODEL`]) list.push({ name: p, base: env[`${p}_BASE_URL`].replace(/\/$/, ''), key: env[`${p}_API_KEY`], model: env[`${p}_MODEL`] });
+  for (const p of ['LLM', 'LLM2']) if (env[`${p}_BASE_URL`] && env[`${p}_API_KEY`] && env[`${p}_MODEL`]) { const base = env[`${p}_BASE_URL`].replace(/\/$/, ''); let host = ''; try { host = new URL(base).host; } catch (e) { /* bad url */ } list.push({ name: p, base, key: env[`${p}_API_KEY`], model: env[`${p}_MODEL`], api: (env[`${p}_API`] || (host === 'api.meta.ai' ? 'responses' : 'chat')).toLowerCase() }); }
   return list;
 }
 
+// Two API shapes: "chat" (OpenAI chat completions, used by Baseten) and "responses" (OpenAI Responses shape, used by api.meta.ai).
+function requestFor(p, messages, mergeSystem = false) {
+  if (p.api === 'responses') {
+    const msgs = mergeSystem ? [{ role: 'user', content: messages.map((m) => (m.role === 'system' ? `Instructions:\n${m.content}` : m.content)).join('\n\n') }] : messages;
+    return { url: `${p.base}/responses`, body: { model: p.model, input: msgs.map((m) => ({ role: m.role, content: [{ type: 'input_text', text: m.content }] })), stream: false, max_output_tokens: 900 } };
+  }
+  return { url: `${p.base}/chat/completions`, body: { model: p.model, messages, temperature: 0.2, max_tokens: 900 } };
+}
+export function extractText(j) {
+  let text = typeof j?.output_text === 'string' ? j.output_text : '';
+  if (!text && Array.isArray(j?.output)) text = j.output.filter((o) => o.type === 'message' || o.content).flatMap((o) => (Array.isArray(o.content) ? o.content : [])).filter((c) => /text/.test(c.type ?? '') && typeof c.text === 'string').map((c) => c.text).join('\n');
+  if (!text) text = j?.choices?.[0]?.message?.content ?? '';
+  if (typeof text !== 'string') return '';
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<\/?think>/gi, '').trim(); // some models print their reasoning first
+}
+async function post(p, messages, authorization, mergeSystem, timeoutMs) {
+  const rq = requestFor(p, messages, mergeSystem); const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), timeoutMs);
+  try { return await fetch(rq.url, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json', authorization }, body: JSON.stringify(rq.body) }); }
+  finally { clearTimeout(t); }
+}
 async function chat(p, messages, timeoutMs = 25000) {
-  const call = async (authorization) => {
-    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), timeoutMs);
-    try { return await fetch(`${p.base}/chat/completions`, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json', authorization }, body: JSON.stringify({ model: p.model, messages, temperature: 0.2, max_tokens: 900 }) }); }
-    finally { clearTimeout(t); }
-  };
-  let r = await call(`Bearer ${p.key}`);
-  if (r.status === 401 || r.status === 403) r = await call(`Api-Key ${p.key}`); // Baseten's own header style, in case the OpenAI-style header is refused
+  let r = await post(p, messages, `Bearer ${p.key}`, false, timeoutMs);
+  if ((r.status === 401 || r.status === 403) && p.api === 'chat') r = await post(p, messages, `Api-Key ${p.key}`, false, timeoutMs); // Baseten's own header style
+  if ((r.status === 400 || r.status === 422) && p.api === 'responses') r = await post(p, messages, `Bearer ${p.key}`, true, timeoutMs); // some servers refuse a system role: send the instructions inside the user message
   if (!r.ok) { let body = ''; try { body = (await r.text()).replace(/\s+/g, ' ').slice(0, 160); } catch (e) { /* ignore */ } throw new Error(`provider ${p.name} status ${r.status}${body ? ': ' + body : ''}`); }
-  const j = await r.json(); let text = j.choices?.[0]?.message?.content;
-  if (typeof text === 'string') text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<\/?think>/gi, ''); // some models print their reasoning first
-  if (typeof text !== 'string' || !text.trim()) throw new Error('empty answer');
-  return text.trim();
+  const text = extractText(await r.json());
+  if (!text) throw new Error('empty answer');
+  return text;
 }
 
 export function templateBrief(d = {}) {
@@ -102,11 +117,12 @@ export async function selfTest(env) {
   if (!ps.length) return { ok: false, results: [], note: 'no provider configured' };
   for (const p of ps) for (const style of ['Bearer', 'Api-Key']) {
     try {
-      const r = await fetch(`${p.base}/chat/completions`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `${style} ${p.key}` }, body: JSON.stringify({ model: p.model, messages: [{ role: 'user', content: 'Reply with the single word: ready' }], max_tokens: 20 }) });
-      const body = (await r.text()).replace(/\s+/g, ' ').slice(0, 200);
-      out.push({ provider: p.name, authStyle: style, status: r.status, body: r.ok ? body.slice(0, 120) : body });
+      const r = await post(p, [{ role: 'user', content: 'Reply with the single word: ready' }], `${style} ${p.key}`, false, 20000);
+      const raw = (await r.text()).replace(/\s+/g, ' ');
+      let shown = raw.slice(0, 200); if (r.ok) { try { shown = 'answer: ' + extractText(JSON.parse(raw)).slice(0, 80); } catch (e) { /* not json */ } }
+      out.push({ provider: p.name, api: p.api, authStyle: style, status: r.status, body: shown });
       if (r.ok) break;
-    } catch (e) { out.push({ provider: p.name, authStyle: style, error: String(e?.message ?? e).slice(0, 120) }); }
+    } catch (e) { out.push({ provider: p.name, api: p.api, authStyle: style, error: String(e?.message ?? e).slice(0, 120) }); }
   }
   return { ok: out.some((x) => x.status === 200), results: out };
 }
