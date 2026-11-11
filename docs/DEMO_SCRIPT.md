@@ -2,6 +2,8 @@
 
 Record the live dashboard (browser, full screen). Voice-over in English. Windows: Win+G (Xbox Game Bar) or OBS. Upload to YouTube as *unlisted* and paste the link in the form.
 
+Two-device version (best demo): laptop on the Dashboard, phone on the Operator page, paired with the 6-character code or the QR. Press DEPLOY on the phone, watch the laptop start, say "come out" on the phone and watch the units walk out on the laptop. Rehearse once first (needs internet on both devices; for a one-laptop test open the Operator page in a second window of the same browser).
+
 Operator-screen version (recommended for the video): open `/web/operator.html` on a phone-sized window, press **DEPLOY**, and narrate that the operator only gives that one signal while the units search, decide and call for help by themselves; show the battery, the sensor readings and the alarm beep. For a distress call use Fire, People 3, Robots 1, kg 105, seed 7 (Instructor setup).
 
 Before recording: open the app, untick **Commander auto-approves**, set speed to 2x, leave **Show ground truth** off.

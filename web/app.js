@@ -2,6 +2,7 @@ import { Simulation } from '/src/sim.js';
 import { T, SCENARIO_NAMES } from '/src/scenarios.js';
 import { verifyChain } from '/src/audit.js';
 import { playAlarm } from '/web/alarm.js';
+import { initHost } from '/web/host-link.js';
 
 const CELL = 22;
 const $ = (id) => document.getElementById(id);
@@ -11,6 +12,7 @@ const q = new URLSearchParams(location.search);
 const DEMO_SEEDS = { fire: 4, water: 5, collapse: 4 };
 
 let scenario = q.get('scenario') && SCENARIO_NAMES.includes(q.get('scenario')) ? q.get('scenario') : 'fire';
+let host = null, standby = false, phoneEver = false;
 let sim = null, playing = true, speed = 2, acc = 0, last = 0, truth = false;
 const ui = { traceN: 0 };
 
@@ -30,6 +32,7 @@ function restart() {
   $('btnAfter').style.display = scenario === 'collapse' ? '' : 'none';
   $('energyHint').textContent = scenario === 'water' ? 'Unit has been on patrol for 2 hours. It trickle-charges from the current while it moves, also while towing someone (sealed turbine, checked by the gate every second), and still stops to charge only if that is not enough.' : scenario === 'fire' ? 'Heat harvest is weak and only allowed in a safe heat gradient with no casualty aboard.' : 'No harvest source in this scenario: battery management only.';
   renderTabs(); draw(); panels();
+  if (host) { host.restarted(); standby = host.connected; if (host.connected) sim.params.approvalTimeout = 120; /* a person on a phone needs longer than 25 simulated seconds */ }
 }
 
 function renderTabs() {
@@ -267,7 +270,7 @@ const fmt = (n, d = 1) => Number(n).toFixed(d);
 let alarmSeen = 0;
 function alarmSound() {
   const n = sim.alarms.length;
-  if (n > alarmSeen && $('chkSound').checked) playAlarm(sim.alarms.slice(alarmSeen).some((x) => x.kind === 'human') ? 'human' : 'unit');
+  if (n > alarmSeen && $('chkSound').checked && !(host && host.connected)) playAlarm(sim.alarms.slice(alarmSeen).some((x) => x.kind === 'human') ? 'human' : 'unit');
   alarmSeen = n;
 }
 function alarmPanel() {
@@ -329,7 +332,8 @@ function panels() {
   $('gateLog').innerHTML = sim.gateLog.slice(-6).reverse().map((x) => `<div><span class="chip ${x.decision === 'ALLOW' ? 'allow' : x.decision === 'BLOCK' ? 'block' : 'appr'}">${x.decision}</span>${x.action} <span class="hint">${x.rule}${x.reason ? ': ' + esc(x.reason) : ''}</span></div>`).join('') || '<span class="hint">No blocks yet.</span>';
   $('cands').innerHTML = sim.candidates.slice(-6).reverse().map((k) => `<div>#${k.id} <span class="chip ${k.status === 'verified' ? 'allow' : k.status === 'rejected' ? 'block' : 'appr'}">${k.status}</span> ${Object.entries(k.hits).map(([a, b]) => `${a}×${b}`).join(', ')}</div>`).join('') || '<span class="hint">No detections yet.</span>';
   $('auditInfo').textContent = `${sim.audit.entries.length} entries`;
-  if (sim.opts.gateMode === 'off') $('banner').textContent = 'SAFETY GATE OFF · naive robot demo · violations: ' + JSON.stringify(sim.violations);
+  if (standby) $('banner').textContent = 'STANDBY · waiting for the DEPLOY signal from the operator\'s phone';
+  else if (sim.opts.gateMode === 'off') $('banner').textContent = 'SAFETY GATE OFF · naive robot demo · violations: ' + JSON.stringify(sim.violations);
   else $('banner').textContent = 'SIMULATION ONLY · placeholder physics · not a certified rescue system';
 }
 const clamp = (v) => Math.max(0, Math.min(100, v));
@@ -338,7 +342,7 @@ const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt
 // ---------------------------------------------------------------- loop + controls
 function frame(ts) {
   const dt = (ts - last) / 1000; last = ts;
-  if (playing && !sim.outcome?.result?.match(/^(casualty|timeout)/)) {
+  if (playing && !standby && !sim.outcome?.result?.match(/^(casualty|timeout)/)) {
     acc += dt * 4 * speed;
     let n = 0;
     while (acc >= 1 && n < 60) { acc -= 1; n++; if (sim.outcome && sim.pending.every((a) => a.status !== 'pending') && sim.mission.state === 'DONE') break; sim.step(); }
@@ -383,3 +387,12 @@ if (q.get('speed')) { speed = Number(q.get('speed')); $('selSpeed').value = Stri
 if (q.get('paused')) { playing = false; $('btnPlay').textContent = 'Play'; }
 restart();
 requestAnimationFrame((t) => { last = t; requestAnimationFrame(frame); });
+
+// ---------------------------------------------------------------- operator phone link (this laptop runs the simulation)
+function phoneDeploy() { if (!standby) return; standby = false; playing = true; $('btnPlay').textContent = 'Pause'; sim.emit('Operator', 'info', 'Operator signal from the phone: DEPLOY. The units go in autonomously.'); panels(); }
+host = initHost({
+  getScn: () => scenario, getSim: () => sim, getCtx: () => ({ deployed: !standby, held: false }),
+  onDeploy: phoneDeploy,
+  onRestart: () => { restart(); standby = host.connected; },
+  onPhone: (c) => { if (c && !phoneEver) { phoneEver = true; $('chkAuto').checked = false; /* approvals now go to the phone */ restart(); standby = true; } else if (!c && standby) { standby = false; } panels(); },
+});

@@ -23,6 +23,7 @@
   .setup{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:12px}
   .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;background:#1b2a3a;margin-right:4px}
   canvas{width:100%;border-radius:10px;background:#070b10}
+  body.remote #setupBox{display:none}
 </style>
 </head>
 <body>
@@ -33,6 +34,10 @@
   </div>
   <div class="banner" style="margin:0">SIMULATION ONLY · design concept of the operator's handheld screen</div>
 
+  <div class="card" id="pairBox"><h2>Pair with the laptop <small>laptop runs the simulation, this phone is the remote</small></h2>
+    <div class="row"><input id="inPair" placeholder="6-character code" maxlength="8" autocapitalize="characters" style="flex:1;min-width:120px;background:#0b1118;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:10px;font-size:18px;letter-spacing:3px;text-transform:uppercase"><button id="btnPair" class="primary">Connect</button></div>
+    <p class="note">On the laptop open the Dashboard: the code and a QR are in the "Operator phone" card. Without pairing, this page runs its own simulation.</p></div>
+  <div class="card" id="pairedBox" style="display:none"><div class="row"><span id="pairStat" class="note">connecting...</span><button id="btnUnpair">Unpair</button></div></div>
   <button id="btnDeploy" class="big">&#9654; DEPLOY: go in, search and rescue (autonomous)</button>
   <div class="note">The operator gives one signal: deploy. There is no steering: the units choose their own route from what they sense (heat, breath and air quality, voice, radar) and ask here for approval or help.</div>
 
@@ -61,7 +66,7 @@
     <button id="btnHold">Hold</button><button id="btnLink">Cut link (test)</button><button id="btnRestart">Reset</button>
     <label class="chk"><input type="checkbox" id="chkSound" checked> Alarm sound</label><button id="btnSound">Test sound</button>
   </div>
-  <details><summary>Instructor setup (not part of the operator's job)</summary>
+  <details id="setupBox"><summary>Instructor setup (not part of the operator's job)</summary>
     <div class="setup">
       <label>Scenario <select id="inScn"><option value="fire">Fire</option><option value="water">Water</option><option value="collapse">Collapse</option><option value="well">Well</option></select></label>
       <label>People <select id="inCount"><option>1</option><option>2</option><option>3</option><option selected>4</option></select></label>

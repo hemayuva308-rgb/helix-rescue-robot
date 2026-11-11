@@ -1,6 +1,7 @@
 import { WellSimulation, WELL_PARAMS as P } from '/src/well.js';
 import { verifyChain } from '/src/audit.js';
 import { playAlarm } from '/web/alarm.js';
+import { initHost } from '/web/host-link.js';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -12,7 +13,7 @@ function opts() {
   return { seed: Number($('inSeed').value) || 1, depthM: Number($('inDepth').value), casualtyWeight: Number($('inWeight').value), gas: $('chkGas').checked,
     gateMode: $('chkGate').checked ? 'on' : 'off', autoCommander: $('chkAuto').checked, commanderDelay: 4, where: $('inWhere').value || undefined, who: $('inWho').value, widthM: Number($('inWidth').value) };
 }
-function restart() { alarmSeen = 0; sim = new WellSimulation(opts()); window.sim = sim; traceN = 0; $('trace').innerHTML = ''; $('auditMsg').textContent = ''; $('outDepth').textContent = $('inDepth').value; $('outWeight').textContent = $('inWeight').value; draw(); panels(); }
+function restart() { alarmSeen = 0; sim = new WellSimulation(opts()); window.sim = sim; traceN = 0; $('trace').innerHTML = ''; $('auditMsg').textContent = ''; if (host) { host.restarted(); standby = host.connected; } $('outDepth').textContent = $('inDepth').value; $('outWeight').textContent = $('inWeight').value; draw(); panels(); }
 
 // ---------------------------------------------------------------- side-view drawing
 function person(g, x, y, s = 1, alpha = 1, shirt = '#e98a3c') {
@@ -101,9 +102,10 @@ function draw() {
 }
 
 // ---------------------------------------------------------------- panels
+let host = null, standby = false, phoneEver = false;
 let alarmSeen = 0;
 function panels() {
-  if (sim.alarms.length > alarmSeen && $('chkSound').checked) playAlarm('human');
+  if (sim.alarms.length > alarmSeen && $('chkSound').checked && !(host && host.connected)) playAlarm('human');
   alarmSeen = sim.alarms.length;
   const m = sim.mission, r = sim.robot, c = sim.casualty;
   const al = $('alarm'), last = sim.alarms[sim.alarms.length - 1];
@@ -143,12 +145,13 @@ function panels() {
   $('gateLog').innerHTML = sim.gateLog.filter((x) => x.decision !== 'ALLOW').slice(-6).reverse().map((x) => `<div><span class="chip ${x.decision === 'BLOCK' ? 'block' : 'appr'}">${x.decision}</span>${x.action} <span class="hint">${x.rule}${x.reason ? ': ' + esc(x.reason) : ''}</span></div>`).join('') || '<span class="hint">No blocks yet.</span>';
   $('auditInfo').textContent = `${sim.audit.entries.length} entries`;
   if (!sim.gateOn) $('banner').textContent = 'SAFETY GATE OFF · naive winch demo · violations: ' + JSON.stringify(sim.violations);
+  else if (standby) $('banner').textContent = 'STANDBY · waiting for the DEPLOY signal from the operator\'s phone';
   else $('banner').textContent = 'SIMULATION ONLY · the winch, sling, rescue pod and securing step are design concepts, not built hardware';
 }
 
 function frame(ts) {
   const dt = (ts - last) / 1000; last = ts;
-  if (playing && !(sim.outcome && sim.mission.state !== 'DONE') && !(sim.outcome && sim.pending.every((a) => a.status !== 'pending') && sim.mission.state === 'DONE')) {
+  if (playing && !standby && !(sim.outcome && sim.mission.state !== 'DONE') && !(sim.outcome && sim.pending.every((a) => a.status !== 'pending') && sim.mission.state === 'DONE')) {
     acc += dt * 4 * speed; let n = 0; while (acc >= 1 && n < 60) { acc -= 1; n++; sim.step(); }
     if (n) panels();
   }
@@ -168,3 +171,12 @@ if (q.get('where')) $('inWhere').value = q.get('where');
 if (q.get('who')) $('inWho').value = q.get('who');
 if (q.get('gas') === '0') $('chkGas').checked = false;
 restart(); requestAnimationFrame(frame);
+
+// ---------------------------------------------------------------- operator phone link (this laptop runs the simulation)
+function phoneDeploy() { if (!standby) return; standby = false; playing = true; $('btnPlay').textContent = 'Pause'; sim.emit('Operator', 'info', 'Operator signal from the phone: DEPLOY. The unit goes in autonomously.'); panels(); }
+host = initHost({
+  getScn: () => 'well', getSim: () => sim, getCtx: () => ({ deployed: !standby, held: false }),
+  onDeploy: phoneDeploy,
+  onRestart: () => { restart(); standby = host.connected; },
+  onPhone: (c) => { if (c && !phoneEver) { phoneEver = true; $('chkAuto').checked = false; restart(); standby = true; } else if (!c && standby) { standby = false; } panels(); },
+});
