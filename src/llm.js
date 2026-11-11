@@ -16,12 +16,14 @@ const SYSTEM = {
   report: 'You write a plain-language incident summary of at most 5 sentences for a SIMULATED rescue run from a JSON summary. Use only the data given, do not invent facts, do not give medical advice. State the outcome, how many people were delivered, any human-help calls and the number of times the safety gate blocked an action.',
 };
 
+const shape = (v) => { const c = clean(v), raw = String(v ?? ''); return { cleanedLength: c.length, hadOuterSpaceOrQuote: raw !== c, hasDot: c.includes('.'), hasInnerSpace: /\s/.test(c), startsWithBearerOrApiKey: /^(bearer|api-key)\s/i.test(c), looksLikeUrl: /^https?:/i.test(c) }; };
+
 export function status(env) {
   const ps = providers(env);
   return {
     configured: ps.length, providers: ps.map((p) => ({ name: p.name, host: new URL(p.base).host, model: p.model })),
     missing: ['LLM_BASE_URL', 'LLM_API_KEY', 'LLM_MODEL'].filter((k) => !env[k]),
-    seen: Object.keys(env).filter((k) => /llm|baseten|muse/i.test(k)).map((k) => ({ name: k, length: String(env[k]).length })), // names and lengths only, never values
+    seen: Object.keys(env).filter((k) => /llm|baseten|muse/i.test(k)).map((k) => ({ name: k, length: String(env[k]).length, ...(/KEY/.test(k) ? shape(env[k]) : {}) })), // names, lengths and the SHAPE of a key, never values
     deployment: { env: env.VERCEL_ENV ?? 'local', commit: String(env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7), region: env.VERCEL_REGION ?? '' },
   };
 }
@@ -43,7 +45,7 @@ async function chat(p, messages, timeoutMs = 25000) {
   };
   let r = await call(`Bearer ${p.key}`);
   if (r.status === 401 || r.status === 403) r = await call(`Api-Key ${p.key}`); // Baseten's own header style, in case the OpenAI-style header is refused
-  if (!r.ok) throw new Error(`provider ${p.name} status ${r.status}`);
+  if (!r.ok) { let body = ''; try { body = (await r.text()).replace(/\s+/g, ' ').slice(0, 160); } catch (e) { /* ignore */ } throw new Error(`provider ${p.name} status ${r.status}${body ? ': ' + body : ''}`); }
   const j = await r.json(); let text = j.choices?.[0]?.message?.content;
   if (typeof text === 'string') text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<\/?think>/gi, ''); // some models print their reasoning first
   if (typeof text !== 'string' || !text.trim()) throw new Error('empty answer');
@@ -92,4 +94,19 @@ export async function handle(task, data, env = {}, ip = 'x') {
     } catch (e) { lastErr = String(e?.name === 'AbortError' ? 'timeout' : e?.message ?? e).slice(0, 120); /* try the next provider, then the template */ }
   }
   return { status: 200, body: { ...fallback(), note: 'language model unavailable, fallback used', why: `the AI provider failed: ${lastErr} (401 or 403 = wrong key, 404 = wrong URL or model name, timeout = too slow)` } };
+}
+
+// GET /api/llm?test=1: one tiny call, reporting the provider's status and error text (never the key).
+export async function selfTest(env) {
+  const out = []; const ps = providers(env);
+  if (!ps.length) return { ok: false, results: [], note: 'no provider configured' };
+  for (const p of ps) for (const style of ['Bearer', 'Api-Key']) {
+    try {
+      const r = await fetch(`${p.base}/chat/completions`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `${style} ${p.key}` }, body: JSON.stringify({ model: p.model, messages: [{ role: 'user', content: 'Reply with the single word: ready' }], max_tokens: 20 }) });
+      const body = (await r.text()).replace(/\s+/g, ' ').slice(0, 200);
+      out.push({ provider: p.name, authStyle: style, status: r.status, body: r.ok ? body.slice(0, 120) : body });
+      if (r.ok) break;
+    } catch (e) { out.push({ provider: p.name, authStyle: style, error: String(e?.message ?? e).slice(0, 120) }); }
+  }
+  return { ok: out.some((x) => x.status === 200), results: out };
 }

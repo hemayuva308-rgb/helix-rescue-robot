@@ -107,3 +107,13 @@ test('keys pasted with spaces, newlines or quotes are cleaned, and a refused Bea
   assert.equal(out.body.mode, 'llm'); assert.equal(out.body.text, 'ok from api-key style');
   assert.deepEqual(seen, ['Bearer abc.def', 'Api-Key abc.def']);
 });
+
+test('self test reports the provider status and error text without the key', async () => {
+  const { selfTest } = await import('../src/llm.js');
+  const srv = http.createServer(async (req, res) => { for await (const c of req); res.writeHead(401, { 'content-type': 'application/json' }); res.end('{"error":"Invalid API key"}'); });
+  await new Promise((r) => srv.listen(0, r));
+  const out = await selfTest({ LLM_BASE_URL: `http://127.0.0.1:${srv.address().port}`, LLM_API_KEY: 'topsecret', LLM_MODEL: 'm' });
+  srv.close();
+  assert.equal(out.ok, false); assert.equal(out.results.length, 2); assert.match(out.results[0].body, /Invalid API key/);
+  assert.ok(!JSON.stringify(out).includes('topsecret'));
+});

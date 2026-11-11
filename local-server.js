@@ -3,7 +3,7 @@
 //   POST /api/brief  -> optional advisory briefing from an OpenAI-compatible endpoint (LLM_BASE_URL, LLM_API_KEY, LLM_MODEL).
 //                       The briefing is advisory text only; it never reaches the safety gate.
 import http from 'node:http';
-import { handle as llmHandle, status as llmStatus } from './src/llm.js';
+import { handle as llmHandle, status as llmStatus, selfTest as llmSelfTest } from './src/llm.js';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,7 +43,7 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   if (req.method === 'POST' && url.pathname === '/api/alert') return alertHandler(req, res);
   if (req.method === 'POST' && url.pathname === '/api/brief') return briefHandler(req, res);
-  if (req.method === 'GET' && url.pathname === '/api/llm') return send(res, 200, llmStatus(process.env));
+  if (req.method === 'GET' && url.pathname === '/api/llm') return send(res, 200, url.searchParams.get('test') ? await llmSelfTest(process.env) : llmStatus(process.env));
   if (req.method === 'POST' && url.pathname === '/api/llm') { const b = await body(req); const out = await llmHandle(String(b.task ?? ''), b.data ?? {}, process.env, req.socket.remoteAddress ?? 'x'); return send(res, out.status, out.body); }
   if (url.pathname === '/api/health') return send(res, 200, { ok: true, telegram: Boolean(process.env.TELEGRAM_BOT_TOKEN), llm: Boolean(process.env.LLM_API_KEY) });
   let p = url.pathname === '/' ? '/web/index.html' : url.pathname;

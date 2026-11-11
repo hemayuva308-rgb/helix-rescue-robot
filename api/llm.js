@@ -1,9 +1,9 @@
 // Vercel serverless function: POST /api/llm { task, data }. Keys are read from environment variables only.
-import { handle, status } from '../src/llm.js';
+import { handle, status, selfTest } from '../src/llm.js';
 
 export default async function handler(req, res) {
   res.setHeader('cache-control', 'no-store');
-  if (req.method === 'GET') { res.status(200).json(status(process.env)); return; } // health check: shows whether the keys were picked up (never the key itself)
+  if (req.method === 'GET') { if (String(req.url ?? '').includes('test=1')) { res.status(200).json(await selfTest(process.env)); return; } res.status(200).json(status(process.env)); return; } // health check: shows whether the keys were picked up (never the key itself)
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST or GET only' }); return; }
   let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
   const ip = String(req.headers['x-forwarded-for'] ?? req.socket?.remoteAddress ?? 'x').split(',')[0].trim();
