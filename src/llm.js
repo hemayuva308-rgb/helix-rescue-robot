@@ -26,22 +26,28 @@ export function status(env) {
   };
 }
 
+const clean = (v) => String(v ?? '').trim().replace(/^["']+|["']+$/g, '').trim();
+
 export function providers(env) {
+  env = Object.fromEntries(Object.entries(env).map(([k, v]) => [k, /^LLM2?_/.test(k) ? clean(v) : v]));
   const list = [];
   for (const p of ['LLM', 'LLM2']) if (env[`${p}_BASE_URL`] && env[`${p}_API_KEY`] && env[`${p}_MODEL`]) list.push({ name: p, base: env[`${p}_BASE_URL`].replace(/\/$/, ''), key: env[`${p}_API_KEY`], model: env[`${p}_MODEL`] });
   return list;
 }
 
 async function chat(p, messages, timeoutMs = 25000) {
-  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), timeoutMs);
-  try {
-    const r = await fetch(`${p.base}/chat/completions`, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json', authorization: `Bearer ${p.key}` }, body: JSON.stringify({ model: p.model, messages, temperature: 0.2, max_tokens: 900 }) });
-    if (!r.ok) throw new Error(`provider ${p.name} status ${r.status}`);
-    const j = await r.json(); let text = j.choices?.[0]?.message?.content;
-    if (typeof text === 'string') text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<\/?think>/gi, ''); // some models print their reasoning first
-    if (typeof text !== 'string' || !text.trim()) throw new Error('empty answer');
-    return text.trim();
-  } finally { clearTimeout(t); }
+  const call = async (authorization) => {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), timeoutMs);
+    try { return await fetch(`${p.base}/chat/completions`, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json', authorization }, body: JSON.stringify({ model: p.model, messages, temperature: 0.2, max_tokens: 900 }) }); }
+    finally { clearTimeout(t); }
+  };
+  let r = await call(`Bearer ${p.key}`);
+  if (r.status === 401 || r.status === 403) r = await call(`Api-Key ${p.key}`); // Baseten's own header style, in case the OpenAI-style header is refused
+  if (!r.ok) throw new Error(`provider ${p.name} status ${r.status}`);
+  const j = await r.json(); let text = j.choices?.[0]?.message?.content;
+  if (typeof text === 'string') text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<\/?think>/gi, ''); // some models print their reasoning first
+  if (typeof text !== 'string' || !text.trim()) throw new Error('empty answer');
+  return text.trim();
 }
 
 export function templateBrief(d = {}) {

@@ -96,3 +96,14 @@ test('status lists the variable names it can see (never values) and the deployme
   assert.equal(s.deployment.commit, '1234567');
   assert.deepEqual(s.missing, ['LLM_BASE_URL']);
 });
+
+test('keys pasted with spaces, newlines or quotes are cleaned, and a refused Bearer header is retried as Api-Key', async () => {
+  const seen = [];
+  const srv = http.createServer(async (req, res) => { let b = ''; for await (const c of req) b += c; seen.push(req.headers.authorization); if (req.headers.authorization.startsWith('Bearer')) { res.writeHead(401); res.end('{}'); return; } res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ choices: [{ message: { content: 'ok from api-key style' } }] })); });
+  await new Promise((r) => srv.listen(0, r));
+  const env = { LLM_BASE_URL: ` "http://127.0.0.1:${srv.address().port}"\n`, LLM_API_KEY: ' "abc.def"\n', LLM_MODEL: ' m ' };
+  const out = await handle('brief', { time: 1 }, env, 'ip30');
+  srv.close();
+  assert.equal(out.body.mode, 'llm'); assert.equal(out.body.text, 'ok from api-key style');
+  assert.deepEqual(seen, ['Bearer abc.def', 'Api-Key abc.def']);
+});
