@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helix Command: well rescue</title>
+<link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">HX</span><div><h1>Helix Command</h1><p>Well and borewell rescue</p></div></div>
+  <div class="banner" id="banner">SIMULATION ONLY &middot; the winch, sling and securing step are design assumptions, not built hardware</div>
+  <div class="tabs">
+    <a class="tab" href="/web/index.html" style="text-decoration:none;color:inherit">&larr; Dashboard<small>fire / water / collapse</small></a>
+    <a class="tab on" href="/web/well.html" style="text-decoration:none;color:inherit">Well<small>vertical shaft</small></a>
+    <a class="tab" href="/web/robot.html" style="text-decoration:none;color:inherit">Robot<small>design as code</small></a>
+  </div>
+</header>
+<main>
+  <section class="left">
+    <div class="statusbar">
+      <div><span class="k">State</span><b id="stState">-</b></div>
+      <div><span class="k">Time</span><b id="stTime">0s</b></div>
+      <div><span class="k">Rescued</span><b id="stRescued">0 / 1</b></div>
+      <div><span class="k">Outcome</span><b id="stOutcome" class="badge">running</b></div>
+    </div>
+    <div class="canvaswrap"><canvas id="map" width="880" height="560"></canvas></div>
+    <div class="controls">
+      <button id="btnPlay">Pause</button><button id="btnStep">Step</button>
+      <label>Speed <select id="selSpeed"><option value="1">1x</option><option value="2" selected>2x</option><option value="5">5x</option><option value="12">12x</option></select></label>
+      <label>Seed <input id="inSeed" type="number" value="1" min="1" max="9999"></label>
+      <label>Well depth <input id="inDepth" type="range" min="5" max="40" value="14"> <b id="outDepth">14</b> m</label>
+      <label>Casualty kg <input id="inWeight" type="range" min="40" max="130" value="75"> <b id="outWeight">75</b></label>
+      <button id="btnRestart" class="primary">Restart</button>
+    </div>
+    <div class="controls">
+      <label class="chk"><input type="checkbox" id="chkGas" checked> Foul gas in the well</label>
+      <label class="chk"><input type="checkbox" id="chkGate" checked> Safety gate ON</label>
+      <label class="chk"><input type="checkbox" id="chkAuto" checked> Commander auto-approves</label>
+      <button id="btnInject">Inject poisoned report</button>
+    </div>
+  </section>
+  <aside class="right">
+    <div class="card">
+      <h2>Energy</h2>
+      <div class="bar"><div id="batFill"></div><div id="batReserve" title="reserve"></div></div>
+      <div class="row"><span id="batText">-</span></div>
+    </div>
+    <div class="card">
+      <h2>Well readout <small>design assumptions</small></h2>
+      <div id="readout" class="mono"></div>
+    </div>
+    <div class="card">
+      <h2>Casualty</h2>
+      <div id="casualty" class="mono">Not found yet</div>
+    </div>
+    <div class="card">
+      <h2>Approvals <small>commander / medic</small></h2>
+      <div id="approvals" class="list"><p class="hint">No pending approvals.</p></div>
+    </div>
+    <div class="card grow">
+      <h2>Agent trace</h2>
+      <div id="trace" class="trace"></div>
+    </div>
+    <div class="card">
+      <h2>Safety gate <small id="gateStats"></small></h2>
+      <div id="gateLog" class="list small"></div>
+    </div>
+    <div class="card">
+      <h2>Audit log <small id="auditInfo"></small></h2>
+      <div class="row"><button id="btnVerify">Verify chain</button></div>
+      <p class="hint" id="auditMsg"></p>
+    </div>
+  </aside>
+</main>
+<footer>Prototype for a hackathon. Not a certified rescue system. All data is synthetic. A walking humanoid cannot go down a shaft, so the unit works a tethered winch from the rim; the winch, sling and securing step are not built.</footer>
+<script type="module" src="/web/well.js"></script>
+</body>
+</html>
