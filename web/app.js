@@ -4,6 +4,7 @@ import { verifyChain } from '/src/audit.js';
 import { playAlarm } from '/web/alarm.js';
 import { initHost } from '/web/host-link.js';
 import { askAi } from '/web/ai.js';
+import { FieldReporter, renderReports } from '/web/fieldreports.js';
 
 const CELL = 22;
 const $ = (id) => document.getElementById(id);
@@ -13,6 +14,8 @@ const q = new URLSearchParams(location.search);
 const DEMO_SEEDS = { fire: 4, water: 4, collapse: 4 };
 
 let scenario = q.get('scenario') && SCENARIO_NAMES.includes(q.get('scenario')) ? q.get('scenario') : 'fire';
+let reportsList = [];
+function resetReports() { reportsList = []; if ($('reports')) renderReports($('reports'), reportsList); if (host) host.clearReports(); }
 let host = null, standby = false, phoneEver = false, standingPref = true;
 let sim = null, playing = true, speed = 2, acc = 0, last = 0, truth = false;
 const ui = { traceN: 0 };
@@ -27,7 +30,7 @@ function opts() {
 
 function restart() {
   alarmSeen = 0;
-  sim = new Simulation(scenario, opts());
+  sim = new Simulation(scenario, opts()); resetReports();
   window.sim = sim;
   ui.traceN = 0; $('trace').innerHTML = ''; $('auditMsg').textContent = '';
   $('btnAfter').style.display = scenario === 'collapse' ? '' : 'none';
@@ -411,3 +414,9 @@ host = initHost({
     panels();
   },
 });
+
+// ---------------------------------------------------------------- field reports (photo and radio message from a unit)
+const reporter = new FieldReporter({ getSim: () => sim, getScn: () => scenario, onReport: (r) => { reportsList.push(r); renderReports($('reports'), reportsList, { onSpeak: speakText }); host.addReport(r); } });
+function speakText(t) { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'en-US'; speechSynthesis.speak(u); } catch (e) { /* no voice */ } }
+setInterval(() => reporter.tick(), 500);
+renderReports($('reports'), reportsList);

@@ -8,6 +8,9 @@ The project works without any model. If you connect an OpenAI-compatible chat AP
 | Free-speech commands (operator page) | maps a sentence such as "it is getting dangerous, pull everyone back" to one of four intents: come out, hold, resume, deploy | invent an action: anything else becomes "not understood". Come out and hold run at once; resume and deploy ask for a tap to confirm. They then pass through the same command grammar and safety gate as typed commands |
 | Incident report summary (dashboard) | writes a short summary of a finished run | change the audit log or the outcome |
 
+| Field reports (dashboard, well page, operator page) | writes the radio-style message that goes with a camera frame: "Found an unconscious adult (C3)…" | see or change anything: the frame is **simulated** (rendered from the simulation state as a thermal view with detection boxes), not a real photograph |
+| Ask the unit (operator page) | answers a question such as "what do you see?" using only the live data | act: it is read-only, actions are only the four commands |
+
 Prompts are fixed on the server (`src/llm.js`); the browser only sends data. Without a key, every feature falls back to a deterministic template or to the fixed command grammar, and says so on screen.
 
 ## Environment variables (names only; never put a key in the code, the repository or a chat)

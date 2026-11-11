@@ -75,3 +75,9 @@ a{color:var(--navy)}
 #cardControls .controls label:has(input[type=range]),#cardControls .controls label:has(input[type=number]){display:grid;grid-template-columns:auto 1fr auto;gap:6px}
 #cardControls .controls label:has(#inWho),#cardControls .controls label:has(#inWhere),#cardControls .controls label:has(#inWidth),#cardControls .controls label:has(#inDepth),#cardControls .controls label:has(#inWeight){grid-column:1/-1;display:grid;grid-template-columns:130px 1fr auto;align-items:center;gap:8px}
 #cardControls .controls label:has(#inWho) select,#cardControls .controls label:has(#inWhere) select,#cardControls .controls label:has(#inWidth) select{width:100%;min-width:0}
+.rep{display:flex;gap:10px;margin-bottom:10px;padding-left:8px;border-left:3px solid var(--line)}
+.rep.urgent{border-left-color:#d32f2f}
+.rep img{width:150px;height:auto;border-radius:8px;align-self:flex-start;border:1px solid var(--line)}
+.rep p{margin:2px 0;font-size:12px}
+.rep b{font-size:12px;color:var(--navy)}
+.rep a{color:var(--navy)}

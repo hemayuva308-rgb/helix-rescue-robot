@@ -22,12 +22,13 @@ export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone,
     catch (e) { card.querySelector('#pQr').remove(); }
   })();
 
+  const reports = [];
   let phoneSeen = 0, helloSent = false, via = '', net = '', got = 0, lastCmd = '';
   const link = createLink({ role: 'host', code, onStatus: (s) => { net = s; paint(); }, onMessage: handle });
   const connected = () => Date.now() - phoneSeen < 8000; // a phone silent for 8 s counts as a lost operator link: the units hold
   let wasConnected = false;
   function paint() { const c = connected(); card.querySelector('summary').textContent = c ? 'Operator phone: connected' : 'Pair a phone as the operator\'s remote'; card.querySelector('#pStat').innerHTML = c ? `<b style="color:#12306b">phone connected</b> (via ${via || 'link'}) · ${got} messages${lastCmd ? ` · last command: "${lastCmd.replace(/[<>&]/g, '')}"` : ''}` : `waiting for the phone · ${net || 'starting'}${got ? ` (${got} messages received so far)` : ''}`; }
-  function sendHello() { const s = getSim(); if (s) link.send(makeHello(s, getScn())); helloSent = true; }
+  function sendHello() { const s = getSim(); if (s) link.send(makeHello(s, getScn())); if (reports.length) link.send({ t: 'reports', list: reports.slice(-8) }); helloSent = true; }
   function handle(m, v) {
     const sim = getSim(); if (!sim) return;
     got++;
@@ -46,5 +47,5 @@ export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone,
     checkConn();
     const sim = getSim(); if (connected() && sim) link.send(snapshot(sim, getScn(), getCtx()));
   }, 500);
-  return { code, url, get connected() { return connected(); }, restarted() { helloSent = false; if (connected()) sendHello(); }, link };
+  return { addReport(r) { reports.push(r); if (reports.length > 20) reports.shift(); if (connected()) link.send({ t: 'report', r }); }, clearReports() { reports.length = 0; }, code, url, get connected() { return connected(); }, restarted() { helloSent = false; if (connected()) sendHello(); }, link };
 }

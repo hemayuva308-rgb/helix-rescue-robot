@@ -2,6 +2,7 @@ import { WellSimulation, WELL_PARAMS as P } from '/src/well.js';
 import { verifyChain } from '/src/audit.js';
 import { playAlarm } from '/web/alarm.js';
 import { initHost } from '/web/host-link.js';
+import { FieldReporter, renderReports } from '/web/fieldreports.js';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -13,7 +14,7 @@ function opts() {
   return { seed: Number($('inSeed').value) || 1, depthM: Number($('inDepth').value), casualtyWeight: Number($('inWeight').value), gas: $('chkGas').checked,
     gateMode: $('chkGate').checked ? 'on' : 'off', autoCommander: $('chkAuto').checked, commanderDelay: 4, where: $('inWhere').value || undefined, who: $('inWho').value, widthM: Number($('inWidth').value) };
 }
-function restart() { alarmSeen = 0; sim = new WellSimulation(opts()); window.sim = sim; traceN = 0; $('trace').innerHTML = ''; $('auditMsg').textContent = ''; if (host) { host.restarted(); standby = host.connected; } $('outDepth').textContent = $('inDepth').value; $('outWeight').textContent = $('inWeight').value; draw(); panels(); }
+function restart() { alarmSeen = 0; sim = new WellSimulation(opts()); resetReports(); window.sim = sim; traceN = 0; $('trace').innerHTML = ''; $('auditMsg').textContent = ''; if (host) { host.restarted(); standby = host.connected; } $('outDepth').textContent = $('inDepth').value; $('outWeight').textContent = $('inWeight').value; draw(); panels(); }
 
 // ---------------------------------------------------------------- side-view drawing
 function person(g, x, y, s = 1, alpha = 1, shirt = '#e98a3c') {
@@ -103,6 +104,8 @@ function draw() {
 }
 
 // ---------------------------------------------------------------- panels
+let reportsList = [];
+function resetReports() { reportsList = []; if ($('reports')) renderReports($('reports'), reportsList); if (host) host.clearReports(); }
 let host = null, standby = false, phoneEver = false, standingPref = true;
 let alarmSeen = 0;
 function panels() {
@@ -186,3 +189,9 @@ host = initHost({
     panels();
   },
 });
+
+// ---------------------------------------------------------------- field reports (photo and radio message from the pod)
+const reporter = new FieldReporter({ getSim: () => sim, getScn: () => 'well', onReport: (r) => { reportsList.push(r); renderReports($('reports'), reportsList, { onSpeak: speakText }); host.addReport(r); } });
+function speakText(t) { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'en-US'; speechSynthesis.speak(u); } catch (e) { /* no voice */ } }
+setInterval(() => reporter.tick(), 500);
+renderReports($('reports'), reportsList);

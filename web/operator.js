@@ -9,6 +9,7 @@ import { makeHello, snapshot } from '/src/snapshot.js';
 import { playAlarm } from '/web/alarm.js';
 import { createLink, cleanCode } from '/web/link.js';
 import { askAi } from '/web/ai.js';
+import { FieldReporter, renderReports } from '/web/fieldreports.js';
 import { parseCommand } from '/src/command.js';
 
 const $ = (id) => document.getElementById(id);
@@ -19,6 +20,10 @@ const SEEDS = { fire: 4, water: 4, collapse: 4, well: 3 };
 const UCOL = { A: '#12306b', B: '#3b6fd4', C: '#6b7a92' };
 
 let mode = 'local', sim = null, deployed = false, held = false, speed = 2, acc = 0, last = 0, alarmSeen = 0, logN = 0;
+let reportsList = [];
+const addReport = (r) => { reportsList.push(r); renderReports($('oReports'), reportsList, { onSpeak: speak }); if ($('chkRadio').checked) speak((r.urgent ? 'Operator, urgent. ' : 'Operator. ') + r.caption); };
+const localReporter = new FieldReporter({ getSim: () => (mode === 'local' ? sim : null), getScn: () => $('inScn').value, onReport: addReport });
+setInterval(() => { if (mode === 'local') localReporter.tick(); }, 500);
 let pendingCmd = 0, pingAt = 0, vm = null, hello = null, link = null, lastMsg = 0, code = '', via = '', net = '';
 
 const scn = () => (mode === 'remote' && hello ? hello.scn : $('inScn').value);
@@ -30,6 +35,7 @@ function make() {
   return new Simulation($('inScn').value, o);
 }
 function restartLocal() {
+  reportsList = []; renderReports($('oReports'), reportsList, { onSpeak: speak });
   sim = make(); sim.params.approvalTimeout = 120; window.sim = sim; deployed = false; held = false; alarmSeen = 0; logN = 0; $('oLog').innerHTML = '';
   speed = Number($('inSpeed').value); hello = makeHello(sim, $('inScn').value); setDeployButton(false); $('btnHold').textContent = 'Hold'; $('btnLink').textContent = 'Cut link (test)';
 }
@@ -55,6 +61,11 @@ async function actCommand(text, source) {
       $('vConfirm').style.display = ''; $('vConfirm').innerHTML = `The AI assistant thinks you meant <b>${CANON[r.intent]}</b>. <button id="vYes">Yes, do it</button> <button id="vNo">No</button>`;
       $('vYes').onclick = () => { $('vConfirm').style.display = 'none'; sendCommand(CANON[r.intent], `${source}, AI-interpreted and confirmed`); }; $('vNo').onclick = () => { $('vConfirm').style.display = 'none'; $('vReply').textContent = 'Unit reply: cancelled.'; };
       return;
+    }
+    if (r.mode === 'llm' && r.intent === 'none') { // not a command: treat it as a question to the unit. Read-only: it can only answer from the live data
+      const snap = vm ? { scenario: vm.scn, time: vm.time, done: vm.done, total: vm.total, outcome: vm.outcome, units: vm.units.map((u) => ({ id: u.id, label: u.label, battery: u.battery })), people: vm.people, alarms: vm.alarms.slice(-3), pending: vm.pending.map((a) => ({ role: a.role, reason: a.reason })), sensing: vm.sense } : {};
+      const a = await askAi('ask', { question: text, snapshot: snap });
+      if (a.mode === 'llm') { $('vReply').textContent = `Unit reply: ${a.text}`; speak(a.text); return; }
     }
   }
   sendCommand(text, source);
@@ -137,6 +148,8 @@ function connect(c) {
     lastMsg = Date.now(); via = v === 'browser' ? 'same browser' : 'internet';
     if (m.t === 'hello') { hello = m; setDeployButton(false); logN = 0; $('oLog').innerHTML = ''; }
     else if (m.t === 'snap') { vm = m; if (!hello) link.send({ t: 'hi', need: 'hello' }); }
+    else if (m.t === 'report') { if (!reportsList.some((x) => x.id === m.r.id)) addReport(m.r); }
+    else if (m.t === 'reports') { reportsList = m.list.slice(); renderReports($('oReports'), reportsList, { onSpeak: speak }); }
     else if (m.t === 'pong') { $('vReply').textContent = `Link test: the laptop answered in ${Date.now() - pingAt} ms. The link works.`; }
     else if (m.t === 'reply') { pendingCmd = 0; $('vHeard').textContent = `Heard: "${m.heard}"`; showReply(m.text); }
   } });
