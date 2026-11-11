@@ -68,7 +68,7 @@ function draw(t) {
   }
   const T0 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, bob, 0, 0, 0, 1];
   let faces = visualFaces(model, q, T0);
-  if ($('cCas').checked) faces = faces.concat(casualtyFaces());
+  if ($('cCas').checked && (q.l_shoulder_pitch ?? 0) < -0.9) faces = faces.concat(casualtyFaces()); // only drawn when the arms are raised to carry
   const items = faces.map((f) => {
     const P = f.pts.map((p) => project(c, p));
     if (P.some((p) => p.z < 0.1)) return null;

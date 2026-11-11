@@ -27,11 +27,11 @@
       <button id="bStand">Stand</button>
       <button id="bCarry">Carry pose</button>
       <button id="bWalk" class="primary">Walk preview</button>
-      <label class="chk"><input type="checkbox" id="cCas" checked> Show casualty (75 kg)</label>
+      <label class="chk"><input type="checkbox" id="cCas" checked> Show casualty in carry pose (75 kg)</label>
       <label>Cadence <input type="range" id="rCad" min="0.5" max="3" step="0.1" value="1.6"></label>
       <a href="/robot/helix.urdf" download style="color:var(--blue)">Download helix.urdf</a>
     </div>
-    <p class="hint">Drag to orbit, scroll to zoom. The walking preview is a joint-angle animation for design review; it does not model balance or contact. Masses and sizes are design assumptions.</p>
+    <p class="hint">Drag to orbit, scroll to zoom. The long pink box is a stand-in for a casualty, drawn only in the carry pose. The walking preview is a joint-angle animation for design review; it does not model balance or contact. Masses and sizes are design assumptions.</p>
   </section>
   <aside class="right">
     <div class="card"><h2>Model readout</h2><div id="stats"></div></div>
