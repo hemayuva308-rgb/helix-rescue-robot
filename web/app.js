@@ -217,11 +217,29 @@ function drawRobot(g, r, rx, ry) {
   if (tag) g.fillText(tag, rx + 24, ry - 22);
 }
 
+
+// Side-view depth gauge: where the unit is in the water column, against its design limits (assumptions).
+function depthGauge(depth, mode) {
+  const H = 150, top = 10, perM = (H - top) / 5, y = (m) => top + m * perM, d = Math.min(depth, 5);
+  return `<svg viewBox="0 0 370 ${H + 14}" width="100%" role="img" aria-label="Depth gauge" style="margin-bottom:6px">
+    <rect x="70" y="${y(0)}" width="150" height="${y(5) - y(0)}" fill="#0b1118" stroke="#223244"/>
+    <rect x="70" y="${y(0)}" width="150" height="${y(d) - y(0)}" fill="#1b5f9e" opacity=".55"/>
+    <rect x="70" y="${y(2.5)}" width="150" height="${y(5) - y(2.5)}" fill="#7a2a2a" opacity=".35"/>
+    <line x1="64" x2="226" y1="${y(1)}" y2="${y(1)}" stroke="#7be0ab" stroke-dasharray="4 3"/><text x="230" y="${y(1) + 4}" fill="#7be0ab" font-size="10">wade limit 1.0 m</text>
+    <line x1="64" x2="226" y1="${y(2.5)}" y2="${y(2.5)}" stroke="#ff6b6b" stroke-width="2"/><text x="230" y="${y(2.5) + 4}" fill="#ff9b9b" font-size="10">swim limit 2.5 m</text>
+    <text x="74" y="${y(3.8)}" fill="#ff9b9b" font-size="10">refused: divers / rope team</text>
+    <circle cx="145" cy="${y(Math.max(0.15, d))}" r="7" fill="#cfe3f5" stroke="#12c4e0" stroke-width="2"/>
+    <text x="4" y="${y(0) + 4}" fill="#8aa0b6" font-size="10">0 m</text><text x="4" y="${y(5) + 4}" fill="#8aa0b6" font-size="10">5 m</text>
+    <text x="4" y="${y(Math.max(0.15, d)) + 4}" fill="#fff" font-size="10" font-weight="bold">${depth.toFixed(1)} m</text>
+  </svg>`;
+}
+
 function ratings() {
   const r = sim.robot, p = sim.params, temp = sim.tempAt(r.x, r.y), depth = sim.depthAt(r.x, r.y), cur = sim.currentMagAt(r.x, r.y);
   const lim = r.carrying ? p.carryTempLimit : p.robotTempLimit, mode = robotMode();
   const row = (label, val, max, unit, note) => `<div class="row"><span>${label}</span><span>${val.toFixed(1)} ${unit} <small>/ limit ${max}</small></span></div><div class="bar sm"><div style="width:${Math.min(100, val / max * 100)}%;background:${val / max > 0.8 ? '#ff6b6b' : '#35d0e6'}"></div></div>${note ? `<p class="hint">${note}</p>` : ''}`;
-  $('ratings').innerHTML = `<div class="row"><span>Mode</span><b>${r.carrying ? mode + ', carrying' : mode}</b></div>` +
+  const gauge = sim.scenario === 'water' ? depthGauge(depth, mode) : '';
+  $('ratings').innerHTML = gauge + `<div class="row"><span>Mode</span><b>${r.carrying ? mode + ', carrying' : mode}</b></div>` +
     row('Heat at the unit', temp, lim, '°C', r.carrying ? 'Carrying: the casualty must stay below 70 °C, so the limit is lower. Empty: 150 °C.' : 'Empty-handed limit 150 °C; it drops to 70 °C once it carries someone.') +
     (sim.scenario === 'water' ? row('Water depth', depth, p.depthLimit, 'm', `Wades to ${RATING.wadeM} m, swims deeper with its buoyancy and propulsion module, refuses over ${p.depthLimit} m.`) + row('Current', cur, p.currentLimit, 'm/s', 'Refuses water flowing faster than the limit.') + `<p class="hint">Charging while moving uses a sealed turbine: no electrical path into the water or the casualty. The gate checks leakage every second and cuts off on a fault. Design assumption: needs real electrical-safety testing before any human contact.</p>` : '');
 }
