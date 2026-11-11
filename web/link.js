@@ -9,6 +9,13 @@ export const cleanCode = (c) => String(c ?? '').toUpperCase().replace(/[^A-Z0-9]
 const loadScript = (src) => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
 const mid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
+// Phone and laptop on different networks (for example mobile data and Wi-Fi) usually need a relay: STUN alone often fails.
+const ICE = { iceServers: [
+  { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' },
+  { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+] };
 export function createLink({ role, code, onMessage, onStatus = () => {} }) {
   const seen = new Set(); const conns = []; let peer = null, closed = false, retry = null;
   const status = (s) => { try { onStatus(s); } catch (e) { /* ignore */ } };
@@ -22,16 +29,17 @@ export function createLink({ role, code, onMessage, onStatus = () => {} }) {
     const Peer = (window.peerjs && window.peerjs.Peer) || window.Peer; if (!Peer) { status('internet link unavailable'); return; }
     try {
       if (role === 'host') {
-        peer = new Peer('helix-' + code);
+        peer = new Peer('helix-' + code, { config: ICE });
         peer.on('open', () => status('internet link ready'));
         peer.on('connection', (c) => { c.on('open', () => wire(c)); });
         peer.on('error', (e) => status(`internet link problem (${e.type})`));
       } else {
-        peer = new Peer();
+        peer = new Peer(undefined, { config: ICE });
         const attempt = () => {
           if (closed || !peer || peer.destroyed) return;
           const c = peer.connect('helix-' + code, { reliable: true, serialization: 'json' });
           c.on('open', () => { wire(c); status('internet link up'); });
+          c.on('iceStateChanged', (s) => status(`connecting (${s})`));
           c.on('close', () => { if (!closed) retry = setTimeout(attempt, 2500); });
           c.on('error', () => {});
         };

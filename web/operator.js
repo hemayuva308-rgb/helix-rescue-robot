@@ -17,7 +17,7 @@ const SEEDS = { fire: 4, water: 5, collapse: 4, well: 3 };
 const UCOL = { A: '#3b82c4', B: '#8b5cf6', C: '#d97706' };
 
 let mode = 'local', sim = null, deployed = false, held = false, speed = 2, acc = 0, last = 0, alarmSeen = 0, logN = 0;
-let vm = null, hello = null, link = null, lastMsg = 0, code = '', via = '', net = '';
+let pendingCmd = 0, pingAt = 0, vm = null, hello = null, link = null, lastMsg = 0, code = '', via = '', net = '';
 
 const scn = () => (mode === 'remote' && hello ? hello.scn : $('inScn').value);
 
@@ -44,7 +44,7 @@ function actDeploy() {
 function actCommand(text, source) {
   if (!text.trim()) return;
   $('vHeard').textContent = `Heard: "${text}"`;
-  if (mode === 'remote') { link.send({ t: 'cmd', text, source }); $('vReply').textContent = 'Unit reply: sent to the laptop...'; return; }
+  if (mode === 'remote') { link.send({ t: 'cmd', text, source }); $('vReply').textContent = 'Unit reply: sent to the laptop, waiting for its answer...'; pendingCmd = Date.now(); setTimeout(() => { if (pendingCmd && Date.now() - pendingCmd >= 3000) $('vReply').textContent = 'Unit reply: NO ANSWER from the laptop in 3 seconds. The link is not working (check the code, that both devices are online, and use the same Wi-Fi if you can).'; }, 3100); return; }
   const res = sim.command(text, source);
   if (res.intent === 'deploy' && res.ok && !deployed) actDeploy();
   showReply(res.reply);
@@ -121,7 +121,8 @@ function connect(c) {
     lastMsg = Date.now(); via = v === 'browser' ? 'same browser' : 'internet';
     if (m.t === 'hello') { hello = m; setDeployButton(false); logN = 0; $('oLog').innerHTML = ''; }
     else if (m.t === 'snap') { vm = m; if (!hello) link.send({ t: 'hi', need: 'hello' }); }
-    else if (m.t === 'reply') { $('vHeard').textContent = `Heard: "${m.heard}"`; showReply(m.text); }
+    else if (m.t === 'pong') { $('vReply').textContent = `Link test: the laptop answered in ${Date.now() - pingAt} ms. The link works.`; }
+    else if (m.t === 'reply') { pendingCmd = 0; $('vHeard').textContent = `Heard: "${m.heard}"`; showReply(m.text); }
   } });
   const beat = () => { if (mode === 'remote' && link) link.send({ t: 'hi', need: hello ? '' : 'hello' }); };
   clearInterval(connect.timer); connect.timer = setInterval(beat, 1500); beat();
@@ -160,6 +161,7 @@ $('btnRestart').onclick = () => { if (mode === 'remote') { link.send({ t: 'resta
 $('btnSound').onclick = () => playAlarm('human');
 $('btnPair').onclick = () => connect($('inPair').value); $('inPair').onkeydown = (e) => { if (e.key === 'Enter') connect($('inPair').value); };
 $('btnUnpair').onclick = disconnect;
+$('btnPing').onclick = () => { if (mode !== 'remote') { $('vReply').textContent = 'Link test: not paired with a laptop (this page is running its own simulation).'; return; } pingAt = Date.now(); link.send({ t: 'ping', n: pingAt }); $('vReply').textContent = 'Link test: sent, waiting...'; setTimeout(() => { if (pingAt && $('vReply').textContent.endsWith('waiting...')) $('vReply').textContent = 'Link test: NO ANSWER from the laptop. The link is not working.'; }, 3500); };
 for (const id of ['inScn', 'inCount', 'inRobots', 'inWeight', 'inSeed', 'chkAuto']) $(id).onchange = () => { if (id === 'inScn') $('inSeed').value = SEEDS[$('inScn').value]; restartLocal(); };
 $('inSpeed').onchange = () => { speed = Number($('inSpeed').value); };
 if (q.get('scenario')) { $('inScn').value = q.get('scenario'); $('inSeed').value = SEEDS[$('inScn').value] ?? 1; }

@@ -18,18 +18,20 @@ export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone 
     catch (e) { card.querySelector('#pQr').remove(); }
   })();
 
-  let phoneSeen = 0, helloSent = false, via = '', net = '';
+  let phoneSeen = 0, helloSent = false, via = '', net = '', got = 0, lastCmd = '';
   const link = createLink({ role: 'host', code, onStatus: (s) => { net = s; paint(); }, onMessage: handle });
   const connected = () => Date.now() - phoneSeen < 6000;
   let wasConnected = false;
-  function paint() { const c = connected(); card.querySelector('#pStat').innerHTML = c ? `<b style="color:#7be0ab">phone connected</b> (via ${via || 'link'})` : `waiting for the phone · ${net || 'starting'}`; }
+  function paint() { const c = connected(); card.querySelector('#pStat').innerHTML = c ? `<b style="color:#7be0ab">phone connected</b> (via ${via || 'link'}) · ${got} messages${lastCmd ? ` · last command: "${lastCmd.replace(/[<>&]/g, '')}"` : ''}` : `waiting for the phone · ${net || 'starting'}${got ? ` (${got} messages received so far)` : ''}`; }
   function sendHello() { const s = getSim(); if (s) link.send(makeHello(s, getScn())); helloSent = true; }
   function handle(m, v) {
     const sim = getSim(); if (!sim) return;
+    got++;
+    if (m.t === 'ping') { link.send({ t: 'pong', n: m.n }); return; }
     if (m.t === 'hi') { phoneSeen = Date.now(); via = v === 'browser' ? 'same browser' : 'internet'; if (m.need === 'hello' || !helloSent) sendHello(); return; }
     phoneSeen = Date.now(); via = v === 'browser' ? 'same browser' : 'internet';
     if (m.t === 'deploy') onDeploy();
-    else if (m.t === 'cmd') { const res = sim.command(String(m.text ?? '').slice(0, 200), m.source ?? 'phone'); link.send({ t: 'reply', ok: res.ok, intent: res.intent, text: res.reply, heard: String(m.text ?? '').slice(0, 200) }); if (res.intent === 'deploy' && res.ok) onDeploy(); }
+    else if (m.t === 'cmd') { lastCmd = String(m.text ?? '').slice(0, 60); paint(); const res = sim.command(String(m.text ?? '').slice(0, 200), m.source ?? 'phone'); link.send({ t: 'reply', ok: res.ok, intent: res.intent, text: res.reply, heard: String(m.text ?? '').slice(0, 200) }); if (res.intent === 'deploy' && res.ok) onDeploy(); }
     else if (m.t === 'approve') { if (m.ok) sim.approve(m.id); else sim.reject(m.id); }
     else if (m.t === 'link') sim.setLink(!!m.up);
     else if (m.t === 'restart') onRestart();
