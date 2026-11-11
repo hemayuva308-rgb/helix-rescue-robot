@@ -27,24 +27,35 @@ export function createLink({ role, code, onMessage, onStatus = () => {} }) {
   async function startPeer() {
     try { if (!window.peerjs && !window.Peer) await loadScript('/web/vendor/peerjs.min.js'); } catch (e) { status('internet link unavailable (library did not load)'); return; }
     const Peer = (window.peerjs && window.peerjs.Peer) || window.Peer; if (!Peer) { status('internet link unavailable'); return; }
+    const idFor = (v) => 'helix-' + code + (v ? '-' + (v + 1) : '');   // a reloaded page can find its old id still taken at the broker: use the next one
     try {
       if (role === 'host') {
-        peer = new Peer('helix-' + code, { config: ICE });
-        peer.on('open', () => status('internet link ready'));
-        peer.on('connection', (c) => { c.on('open', () => wire(c)); });
-        peer.on('error', (e) => status(`internet link problem (${e.type})`));
+        let variant = 0;
+        const startHost = () => {
+          if (closed) return;
+          peer = new Peer(idFor(variant), { config: ICE });
+          peer.on('open', () => status('internet link ready'));
+          peer.on('connection', (c) => { c.on('open', () => wire(c)); });
+          peer.on('disconnected', () => { status('reconnecting to the broker'); try { peer.reconnect(); } catch (e) { /* ignore */ } });
+          peer.on('error', (e) => { status(`internet link problem (${e.type})`); if (e.type === 'unavailable-id' && variant < 5) { variant++; try { peer.destroy(); } catch (x) { /* ignore */ } setTimeout(startHost, 600); } });
+        };
+        startHost();
+        window.addEventListener('beforeunload', () => { try { peer && peer.destroy(); } catch (e) { /* ignore */ } });
       } else {
+        let vi = 0, timer = null;
         peer = new Peer(undefined, { config: ICE });
+        const next = () => { clearTimeout(timer); vi = (vi + 1) % 6; retry = setTimeout(attempt, 1200); };
         const attempt = () => {
           if (closed || !peer || peer.destroyed) return;
-          const c = peer.connect('helix-' + code, { reliable: true, serialization: 'json' });
-          c.on('open', () => { wire(c); status('internet link up'); });
+          const c = peer.connect(idFor(vi), { reliable: true, serialization: 'json' });
+          timer = setTimeout(() => { if (!c.open) { try { c.close(); } catch (e) { /* ignore */ } status(`looking for the laptop (no answer from id ${vi + 1})`); next(); } }, 6000);
+          c.on('open', () => { clearTimeout(timer); wire(c); status('internet link up'); });
           c.on('iceStateChanged', (s) => status(`connecting (${s})`));
-          c.on('close', () => { if (!closed) retry = setTimeout(attempt, 2500); });
+          c.on('close', () => { if (!closed) { clearTimeout(timer); retry = setTimeout(attempt, 2000); } });
           c.on('error', () => {});
         };
         peer.on('open', attempt);
-        peer.on('error', (e) => { status(`looking for the laptop (${e.type})`); if (!closed && e.type === 'peer-unavailable') retry = setTimeout(attempt, 2500); });
+        peer.on('error', (e) => { status(`looking for the laptop (${e.type})`); if (!closed && e.type === 'peer-unavailable') next(); });
         peer.on('disconnected', () => { try { peer.reconnect(); } catch (e) { /* ignore */ } });
       }
     } catch (e) { status('internet link problem'); }
