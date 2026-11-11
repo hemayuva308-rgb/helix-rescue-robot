@@ -28,7 +28,7 @@
   body.remote #setupBox{display:none}
   .op{display:flex;flex-direction:column;gap:10px}
   .col{display:contents}
-  .oph{order:1}#banner{order:2}#pairBox{order:3}#pairedBox{order:4}#btnDeploy{order:5}#lStanding{order:6}#nOp{order:7}#alarm{order:8}#cState{order:9}#cVoice{order:10}#cBrief{order:11}#cReports{order:12}#cUnits{order:13}#cAppr{order:14}#cLive{order:15}#cSense{order:16}#cPeople{order:17}#cAlarms{order:18}#cEvents{order:19}#cBtns{order:20}#setupBox{order:21}
+  .oph{order:1}#banner{order:2}#hostMount{order:3}#pairBox{order:3}#pairedBox{order:4}#btnDeploy{order:5}#lStanding{order:6}#nOp{order:7}#alarm{order:8}#cState{order:9}#cVoice{order:10}#cBrief{order:11}#cReports{order:12}#cUnits{order:13}#cAppr{order:14}#cLive{order:15}#cSense{order:16}#cPeople{order:17}#cAlarms{order:18}#cEvents{order:19}#cBtns{order:20}#setupBox{order:21}
   /* a laptop or a large screen: a three-column control room instead of the phone column */
   @media (min-width:1000px){
     body{max-width:none}
@@ -49,7 +49,8 @@
     <a class="tab" href="/web/index.html">Dashboard</a>
   </div>
 <div class="status" id="banner" hidden></div>
-<div class="card" id="pairBox"><h2>Pair with the laptop <small>laptop runs the simulation, this phone is the remote</small></h2>
+<div id="hostMount" style="display:none"></div>
+  <div class="card" id="pairBox"><h2>Pair with the laptop <small>laptop runs the simulation, this phone is the remote</small></h2>
     <div class="row"><input id="inPair" placeholder="6-character code" maxlength="8" autocapitalize="characters" style="flex:1;min-width:120px;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:10px;font-size:18px;letter-spacing:3px;text-transform:uppercase"><button id="btnPair" class="primary">Connect</button></div>
     <p class="note">On the laptop open the Dashboard: open "Pair a phone as the operator's remote" at the bottom of the right column to see the code and a QR. Without pairing, this page runs its own simulation.</p></div>
 <div class="card" id="pairedBox" style="display:none"><div class="row"><span id="pairStat" class="note">connecting...</span><button id="btnPing">Test link</button><button id="btnUnpair">Unpair</button></div></div>

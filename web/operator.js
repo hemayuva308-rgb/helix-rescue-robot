@@ -8,6 +8,7 @@ import { T } from '/src/scenarios.js';
 import { makeHello, snapshot } from '/src/snapshot.js';
 import { playAlarm } from '/web/alarm.js';
 import { createLink, cleanCode } from '/web/link.js';
+import { initHost } from '/web/host-link.js';
 import { askAi } from '/web/ai.js';
 import { humanize, unitName } from '/src/names.js';
 import { FieldReporter, renderReports } from '/web/fieldreports.js';
@@ -22,7 +23,8 @@ const UCOL = { A: '#12306b', B: '#3b6fd4', C: '#6b7a92' };
 
 let mode = 'local', sim = null, deployed = false, held = false, speed = 2, acc = 0, last = 0, alarmSeen = 0, logN = 0;
 let reportsList = [];
-const addReport = (r) => { reportsList.push(r); renderReports($('oReports'), reportsList, { onSpeak: speak }); if ($('chkRadio').checked) speak((r.urgent ? 'Operator, urgent. ' : 'Operator. ') + r.caption); };
+let hostApi = null;
+const addReport = (r) => { reportsList.push(r); if (hostApi) hostApi.addReport(r); renderReports($('oReports'), reportsList, { onSpeak: speak }); if ($('chkRadio').checked) speak((r.urgent ? 'Operator, urgent. ' : 'Operator. ') + r.caption); };
 const localReporter = new FieldReporter({ getSim: () => (mode === 'local' ? sim : null), getScn: () => $('inScn').value, onReport: addReport });
 setInterval(() => { if (mode === 'local') localReporter.tick(); }, 500);
 let pendingCmd = 0, pingAt = 0, vm = null, hello = null, link = null, lastMsg = 0, code = '', via = '', net = '';
@@ -36,7 +38,7 @@ function make() {
   return new Simulation($('inScn').value, o);
 }
 function restartLocal() {
-  reportsList = []; renderReports($('oReports'), reportsList, { onSpeak: speak });
+  reportsList = []; renderReports($('oReports'), reportsList, { onSpeak: speak }); if (hostApi) hostApi.clearReports();
   sim = make(); sim.params.approvalTimeout = 120; window.sim = sim; deployed = false; held = false; alarmSeen = 0; logN = 0; $('oLog').innerHTML = '';
   speed = Number($('inSpeed').value); hello = makeHello(sim, $('inScn').value); setDeployButton(false); $('btnHold').textContent = 'Hold'; $('btnLink').textContent = 'Cut link (test)';
 }
@@ -114,7 +116,7 @@ function render(v) {
   $('oTime').textContent = `${v.time}s`; $('oRescued').textContent = `${v.done} / ${v.total}`; $('oOutcome').textContent = v.outcome ? v.outcome.result.replace('_', ' ') : '-';
   const al = $('alarm'), lastA = v.alarms[v.alarms.length - 1];
   if (lastA) { al.style.display = ''; al.className = 'alarm ' + (lastA.kind === 'human' ? 'human' : 'unit'); al.innerHTML = lastA.kind === 'human' ? `<b>DISTRESS CALL</b> · t=${lastA.t}s · ${esc(unitName(lastA.unit))} needs <b>${esc(lastA.need)}</b><br><span>${esc(lastA.reason)}</span>` : `<b>UNIT-TO-UNIT HELP</b> · t=${lastA.t}s · ${esc(unitName(lastA.unit))} asks <b>${esc(lastA.need)}</b><br><span>${esc(lastA.reason)}</span>`; } else al.style.display = 'none';
-  if (v.alarms.length > alarmSeen && $('chkSound').checked) playAlarm(v.alarms.slice(alarmSeen).some((x) => x.kind === 'human') ? 'human' : 'unit');
+  if (v.alarms.length > alarmSeen && $('chkSound').checked && !(hostApi && hostApi.connected)) playAlarm(v.alarms.slice(alarmSeen).some((x) => x.kind === 'human') ? 'human' : 'unit');
   alarmSeen = v.alarms.length;
   $('oUnits').innerHTML = v.units.map((u) => { const b = Math.max(0, Math.min(100, u.battery)), col = b < 20 ? '#d32f2f' : b < 40 ? '#e08a00' : '#4f7fd9'; return `<div class="row"><span><b style="color:${UCOL[u.id]}">${esc(u.name ?? unitName(u.id))}</b> · ${esc(u.label)}</span><span>${fmt(b)}%</span></div><div class="ubar"><div style="width:${b}%;background:${col}"></div></div>`; }).join('') + (v.harvested ? `<p class="note">Energy gathered from the environment so far: ${fmt(v.harvested)}%</p>` : '');
   const ap = $('oAppr'); const key = v.pending.map((a) => a.id).join('|'); if (ap.dataset.key !== key || !v.pending.length) {
@@ -210,3 +212,24 @@ if (q.get('seed')) $('inSeed').value = q.get('seed'); if (q.get('speed')) $('inS
 restartLocal(); requestAnimationFrame(frame);
 if (q.get('pair')) { $('inPair').value = cleanCode(q.get('pair')); connect(q.get('pair')); }
 else { try { const last = localStorage.getItem('helixLastCode'); if (last) $('inPair').value = last; } catch (e) { /* ignore */ } }
+
+// ---------------------------------------------------------------- laptop screen or phone screen?
+// A wide screen (a laptop) shows the pairing CODE and QR and is the host the phone connects to.
+// A narrow screen (a phone) shows the box where the code is typed. ?role=laptop or ?role=phone forces one.
+const isLaptop = q.get('role') ? q.get('role') === 'laptop' : window.matchMedia('(min-width: 1000px)').matches;
+if (isLaptop && !q.get('pair')) {
+  $('pairBox').style.display = 'none'; $('hostMount').style.display = '';
+  let phoneEver = false;
+  hostApi = initHost({
+    mount: $('hostMount'), getScn: () => $('inScn').value, getSim: () => (mode === 'local' ? sim : null), getCtx: () => ({ deployed, held }),
+    onDeploy: () => actDeploy(),
+    onRestart: () => restartLocal(),
+    onStanding: (on) => { $('chkStanding').checked = on; if (sim) sim.opts.standingApproval = on; },
+    onSolo: () => { sim.opts.autoCommander = true; $('chkAuto').checked = true; actDeploy(); },
+    onPhone: (c) => {
+      if (c && !phoneEver) { phoneEver = true; $('chkAuto').checked = false; restartLocal(); sim.params.approvalTimeout = 120; sim.opts.standingApproval = $('chkStanding').checked; } // approvals now go to the phone
+      else if (c) { if (deployed) sim.setLink(true); }
+      else if (deployed && !sim.outcome) sim.setLink(false); // the phone is gone: same as a lost link
+    },
+  });
+}

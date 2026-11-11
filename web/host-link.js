@@ -2,7 +2,7 @@
 import { createLink, newCode } from '/web/link.js';
 import { makeHello, snapshot } from '/src/snapshot.js';
 
-export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone, onSolo, onStanding }) {
+export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone, onSolo, onStanding, mount }) {
   // the pairing code stays the same for this browser (until its site data is cleared), so a phone that remembers it keeps working
   let code = null; try { code = localStorage.getItem('helixCode') || sessionStorage.getItem('helixCode'); } catch (e) { /* ignore */ }
   if (!code || !/^[A-Z0-9]{6}$/.test(code)) code = newCode();
@@ -16,7 +16,7 @@ export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone,
     <div class="row"><span id="pStat" class="hint">waiting for the phone</span></div>
     <p class="hint" id="pLog"></p>
     <button id="pSolo">Run without the phone</button>`;
-  const aside = document.querySelector('aside.right'); if (aside) aside.append(card);
+  if (mount) { mount.append(card); card.open = true; } else { const aside = document.querySelector('aside.right'); if (aside) aside.append(card); }
   const tag = document.querySelector('header .tag'); let pill = null;
   if (tag) { pill = document.createElement('a'); pill.className = 'tag'; pill.href = '#phoneCard'; pill.style.textDecoration = 'none'; pill.style.color = 'var(--navy)'; pill.title = 'Open the phone pairing details'; pill.onclick = () => { card.open = true; }; tag.before(pill); }
   card.querySelector('#pSolo').onclick = () => { if (onSolo) onSolo(); };
