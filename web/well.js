@@ -102,7 +102,7 @@ function draw() {
 }
 
 // ---------------------------------------------------------------- panels
-let host = null, standby = false, phoneEver = false;
+let host = null, standby = false, phoneEver = false, standingPref = true;
 let alarmSeen = 0;
 function panels() {
   if (sim.alarms.length > alarmSeen && $('chkSound').checked && !(host && host.connected)) playAlarm('human');
@@ -178,6 +178,7 @@ host = initHost({
   getScn: () => 'well', getSim: () => sim, getCtx: () => ({ deployed: !standby, held: false }),
   onDeploy: phoneDeploy,
   onRestart: () => { restart(); standby = host.connected; },
+  onStanding: (on) => { standingPref = on; if (sim) sim.opts.standingApproval = on; },
   onSolo: () => { standby = false; playing = true; $('btnPlay').textContent = 'Pause'; sim.opts.autoCommander = true; $('chkAuto').checked = true; sim.setLink(true); sim.emit('System', 'info', 'Running without the phone: approvals are automatic.'); panels(); },
   onPhone: (c) => {
     if (c && !phoneEver) { phoneEver = true; $('chkAuto').checked = false; restart(); standby = true; }

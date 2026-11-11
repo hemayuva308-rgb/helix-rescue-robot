@@ -115,13 +115,14 @@ export class WellSimulation {
     if (this.pending.some((x) => x.kind === kind && x.ref === ref && x.status === 'pending') || this.approvals.has(kind + ':' + ref)) return;
     const a = { id: `${kind}-${ref}-${this.t}`, kind, ref, role, reason, requestedAt: this.t, deadline: this.t + this.params.approvalTimeout, status: 'pending' };
     if (this.opts.autoCommander && this.opts.commanderResponsive !== false) a.autoAt = this.t + (this.opts.commanderDelay ?? Math.round(this.rng.range(3, 9)));
+    else if (this.opts.standingApproval && kind !== 'medic' && this.opts.commanderResponsive !== false) { a.autoAt = this.t + 4; a.standing = true; }
     this.pending.push(a);
     this.emit('Dispatch', 'approval', `Approval requested from ${role}: ${reason}`, { kind, ref });
   }
   approve(id) {
     const a = this.pending.find((x) => x.id === id && x.status === 'pending'); if (!a) return false;
     a.status = 'approved'; a.at = this.t; this.approvals.add(a.kind + ':' + a.ref);
-    this.emit('Commander', 'approval', `${a.role} APPROVED: ${a.kind} (${a.ref})`, { kind: a.kind });
+    this.emit('Commander', 'approval', `${a.role} APPROVED${a.standing ? ' (standing authorisation given with DEPLOY)' : ''}: ${a.kind} (${a.ref})`, { kind: a.kind });
     if (a.kind === 'dispatch') { const msg = `Helix Command: casualty C1 brought out of the well and delivered to the safe zone at t=${this.t}s. Handoff report attached.`; this.alerts.push({ t: this.t, msg }); this.emit('Dispatch', 'action', `ALERT SENT to medical and fire teams: ${msg}`); if (this.opts.onAlert) this.opts.onAlert(msg, this); }
     return true;
   }

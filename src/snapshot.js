@@ -23,6 +23,7 @@ export function snapshot(sim, scn, ctx = {}) {
   const s = {
     t: 'snap', scn, time: sim.t, deployed: !!ctx.deployed, held: !!(ctx.held || sim.holdCmd), recall: !!sim.recall && !sim.outcome, linkUp: sim.linkUp !== false,
     outcome: sim.outcome ? { result: sim.outcome.result, reason: sim.outcome.reason } : null, total, done, harvested: +(sim.harvestedTotal ?? 0).toFixed(1),
+    standing: !!(sim.opts && sim.opts.standingApproval),
     en: sim.events.length, ev: sim.events.slice(-14).map((e, k) => ({ i: sim.events.length - Math.min(14, sim.events.length) + k, t: e.t, agent: e.agent, kind: e.kind, msg: e.msg })),
     pending: sim.pending.filter((a) => a.status === 'pending').map((a) => ({ id: a.id, role: a.role, reason: a.reason, left: Math.max(0, a.deadline - sim.t) })),
     alarms: sim.alarms.map((a) => ({ t: a.t, kind: a.kind, unit: a.unit, need: a.need, reason: a.reason, x: a.x ?? 0, y: a.y ?? 0 })),
@@ -42,8 +43,8 @@ export function snapshot(sim, scn, ctx = {}) {
     s.sense = units.map((u) => { const r = u.robot, bits = [`heat ${fmt(sim.tempAt(r.x, r.y), 0)} °C`]; if (scn === 'fire') bits.push(`smoke ${fmt(sim.smoke[sim.idx(r.x, r.y)] * 100, 0)}%`); if (scn === 'water') bits.push(`current ${fmt(sim.currentMagAt(r.x, r.y))} m/s`); if (scn === 'collapse') bits.push(`structure risk ${fmt(sim.collapseRisk, 2)}`); return `unit ${u.id}   ${bits.join(' · ')}`; })
       .concat(sim.candidates.filter((c) => !c.handled).slice(-5).map((c) => `detection #${c.id}  ${Object.keys(c.hits).map((k) => SENSE[k]).join(' + ')}  ${c.status === 'verified' ? '→ VERIFIED (2 sensor types)' : c.status === 'rejected' ? '→ rejected (decoy)' : '→ checking'}`));
     const found = sim.casualties.filter((c) => c.verifiedOnce);
-    s.people = found.map((c) => `${c.id} · ${c.age} · ${c.estimate ? fmt(c.estimate, 0) + ' kg' : '? kg'} · health ${fmt(c.health, 0)} · ${c.delivered ? 'DELIVERED' : c.referred ? 'human team called' : !c.alive ? 'lost' : c.aboard ? 'being carried' : 'waiting'}`);
-    s.heads = found.filter((c) => c.alive && !c.delivered && !c.aboard).map((c) => [Math.round(c.fx), Math.round(c.fy), c.id]);
+    s.people = found.map((c) => `${c.id} · ${c.animal ? 'dog' : c.age} · ${c.estimate ? fmt(c.estimate, 0) + ' kg' : '? kg'} · health ${fmt(c.health, 0)} · ${c.delivered ? 'DELIVERED' : c.referred ? 'human team called' : !c.alive ? 'lost' : c.aboard ? 'being carried' : 'waiting'}`);
+    s.heads = found.filter((c) => c.alive && !c.delivered && !c.aboard).map((c) => [Math.round(c.fx), Math.round(c.fy), c.id, c.animal ? 1 : 0]);
     if (scn === 'fire') { const f = []; for (let i = 0; i < sim.fireI.length; i++) if (sim.fireI[i] > 0.02) f.push([i % sim.W, Math.floor(i / sim.W), +sim.fireI[i].toFixed(2)]); s.fire = f; }
   }
   return s;

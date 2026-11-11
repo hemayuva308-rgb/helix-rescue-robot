@@ -2,7 +2,7 @@
 import { createLink, newCode } from '/web/link.js';
 import { makeHello, snapshot } from '/src/snapshot.js';
 
-export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone, onSolo }) {
+export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone, onSolo, onStanding }) {
   let code = null; try { code = sessionStorage.getItem('helixCode'); } catch (e) { /* ignore */ }
   if (!code) { code = newCode(); try { sessionStorage.setItem('helixCode', code); } catch (e) { /* ignore */ } }
   const url = `${location.origin}/web/operator.html?pair=${code}`;
@@ -38,6 +38,7 @@ export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone,
     else if (m.t === 'cmd') { lastCmd = String(m.text ?? '').slice(0, 60); paint(); const res = sim.command(String(m.text ?? '').slice(0, 200), m.source ?? 'phone'); link.send({ t: 'reply', ok: res.ok, intent: res.intent, text: res.reply, heard: String(m.text ?? '').slice(0, 200) }); if (res.intent === 'deploy' && res.ok) onDeploy(); }
     else if (m.t === 'approve') { if (m.ok) sim.approve(m.id); else sim.reject(m.id); }
     else if (m.t === 'link') sim.setLink(!!m.up);
+    else if (m.t === 'standing') { if (onStanding) onStanding(!!m.on); }
     else if (m.t === 'restart') onRestart();
   }
   function checkConn() { const c = connected(); if (c !== wasConnected) { wasConnected = c; note(c ? 'phone connected' : 'phone silent for 8 s: treated as a lost operator link'); if (onPhone) onPhone(c); paint(); } }

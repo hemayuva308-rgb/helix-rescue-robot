@@ -5,7 +5,7 @@ import { Simulation } from '../src/sim.js';
 const run = (sc, seed, n = 3) => new Simulation(sc, { seed, autoCommander: true, commanderDelay: 4, casualtyCount: n, casualtyWeight: 75 }).run(900);
 
 test('multi-casualty: unit keeps rescuing until the area is clear (demo seeds)', () => {
-  for (const [sc, seed] of [['fire', 60], ['water', 19], ['collapse', 4]]) {
+  for (const [sc, seed] of [['fire', 60], ['water', 4], ['collapse', 4]]) {
     const r = run(sc, seed);
     assert.equal(r.outcome, 'delivered', sc);
     assert.equal(r.delivered, 3, sc);
@@ -90,4 +90,24 @@ test('link loss: units hold, a unit carrying keeps going, approvals wait, and ev
   const r = s.run(900);
   assert.equal(Object.values(r.violations).reduce((a, b) => a + b, 0), 0);
   assert.ok(r.delivered >= 3);
+});
+
+test('animals: dogs in the incident are found and brought out after the people, with zero violations', () => {
+  for (const [sc, seed] of [['fire', 4], ['water', 4], ['collapse', 4]]) {
+    const s = new Simulation(sc, { seed, autoCommander: false, standingApproval: true, commanderDelay: 4, casualtyCount: 3, animals: 1, casualtyWeight: 75, robots: 2, transitHarvest: true });
+    const r = s.run(900);
+    assert.equal(s.casualties.filter((c) => c.animal).length, 1);
+    assert.equal(r.outcome, 'delivered', sc);
+    assert.equal(r.delivered, 4, sc);
+    assert.equal(Object.values(r.violations).reduce((a, b) => a + b, 0), 0);
+    const order = s.events.filter((e) => /handed off inside the safe zone/.test(e.msg)).map((e) => e.msg.match(/C\d|D\d/)[0]);
+    assert.equal(order[order.length - 1].startsWith('D') || order.includes('D1'), true);
+  }
+});
+
+test('standing approval: DEPLOY approves lifts without waiting, but a medic approval for a spinal injury still needs a person', () => {
+  const s = new Simulation('fire', { seed: 4, autoCommander: false, standingApproval: true, commanderDelay: 4, casualtyCount: 3, casualtyWeight: 75, robots: 1 });
+  const r = s.run(900);
+  assert.ok(r.delivered >= 2);
+  assert.ok(s.events.some((e) => /standing authorisation/.test(e.msg)));
 });

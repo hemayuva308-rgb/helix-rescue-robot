@@ -39,6 +39,7 @@
     <p class="note">On the laptop open the Dashboard: the code and a QR are in the "Operator phone" card. Without pairing, this page runs its own simulation.</p></div>
   <div class="card" id="pairedBox" style="display:none"><div class="row"><span id="pairStat" class="note">connecting...</span><button id="btnPing">Test link</button><button id="btnUnpair">Unpair</button></div></div>
   <button id="btnDeploy" class="big">&#9654; DEPLOY: go in, search and rescue (autonomous)</button>
+  <label class="chk"><input type="checkbox" id="chkStanding" checked> DEPLOY also approves rescue lifts and alerts (standing authorisation). A medic approval for a spinal injury still waits for you.</label>
   <div class="note">The operator gives one signal: deploy. There is no steering: the units choose their own route from what they sense (heat, breath and air quality, voice, radar) and ask here for approval or help.</div>
 
   <div id="alarm" class="alarm" style="display:none"></div>
@@ -69,7 +70,8 @@
   <details id="setupBox"><summary>Instructor setup (not part of the operator's job)</summary>
     <div class="setup">
       <label>Scenario <select id="inScn"><option value="fire">Fire</option><option value="water">Water</option><option value="collapse">Collapse</option><option value="well">Well</option></select></label>
-      <label>People <select id="inCount"><option>1</option><option>2</option><option>3</option><option selected>4</option></select></label>
+      <label>People <select id="inCount"><option>1</option><option>2</option><option selected>3</option><option>4</option></select></label>
+      <label>Animals <select id="inAnimals"><option>0</option><option selected>1</option><option>2</option></select></label>
       <label>Robots <select id="inRobots"><option>1</option><option selected>2</option><option>3</option></select></label>
       <label>Casualty kg <input id="inWeight" type="number" value="75" min="30" max="140" style="width:64px"></label>
       <label>Seed <input id="inSeed" type="number" value="4" style="width:64px"></label>

@@ -8,7 +8,7 @@ Operator-screen version (recommended for the video): open `/web/operator.html` o
 
 Before recording: open the app, untick **Commander auto-approves**, set speed to 2x, leave **Show ground truth** off.
 
-> Multi-casualty demo: leave **People = 4**, **Robots = 2** and the default seeds (fire 4, water 5, collapse 4). Heavy-casualty demo: Fire, People 3, Robots 2, Casualty kg 105, seed 7 (units lift together); set Robots to 1 and the same run shows the distress call. Older single-unit settings: People 3 / Robots 1 with seeds fire 60, water 19, collapse 4. The unit rescues all three one after another, most critical first, then stops when the area is clear. The timed script below shows one casualty, so set **People = 1** for it (fire seed 10, water seed 1).
+> Multi-casualty demo: leave **People = 3**, **Animals = 1**, **Robots = 2** and the default seeds (fire 4, water 4, collapse 4): the units rescue three people and a dog, people first. Heavy-casualty demo: Fire, People 3, Robots 2, Casualty kg 105, seed 7 (units lift together); set Robots to 1 and the same run shows the distress call. Older single-unit settings: People 3, Animals 0, Robots 1 with seeds fire 60, water 4, collapse 4. The unit rescues all three one after another, most critical first, then stops when the area is clear. The timed script below shows one casualty, so set **People = 1** for it (fire seed 10, water seed 1).
 
 | Time | On screen | Say |
 | --- | --- | --- |

@@ -129,7 +129,8 @@ export function buildScenario(name, opts = {}) {
   const profile = opts.profile ?? randomProfile(rng, opts);
   Object.assign(base.casualties[0], profile);
   const n = Math.max(1, Math.min(4, Math.round(opts.casualtyCount ?? 1)));
-  if (n > 1) addCasualties(name, base, n, opts); // separate RNG stream: single-casualty runs are unchanged
+  const na = Math.max(0, Math.min(3, Math.round(opts.animals ?? 0)));
+  if (n > 1 || na > 0) addCasualties(name, base, n, opts); // separate RNG stream: single-casualty runs are unchanged
   return { name, ...base, params: { ...BASE_PARAMS, ...base.params } };
 }
 
@@ -147,10 +148,10 @@ export function randomProfile(rng, opts = {}) {
 function addCasualties(name, base, n, opts) {
   const rng = makeRng((opts.seed ?? 1) * 31337 + 5);
   const taken = base.casualties.map((c) => ({ x: c.x, y: c.y }));
-  const far = (x, y) => taken.every((p) => Math.hypot(p.x - x, p.y - y) >= 5);
+  const far = (x, y) => taken.every((p) => Math.hypot(p.x - x, p.y - y) >= (name === 'water' ? 3.5 : 5));
   const spots = [];
   if (name === 'fire') for (const r of [{ x: 9, y: 5 }, { x: 19, y: 5 }, { x: 30, y: 5 }, { x: 9, y: 15 }, { x: 19, y: 15 }, { x: 30, y: 15 }]) spots.push(r);
-  else if (name === 'water') for (const x of [11, 15, 19, 24, 28]) spots.push({ x, y: rng.int(4, 8) });
+  else if (name === 'water') for (const x of [10, 14, 18, 22, 26, 30]) spots.push({ x, y: rng.int(3, 9) });
   else for (const p of [{ x: 20, y: 5 }, { x: 25, y: 16 }, { x: 15, y: 10 }, { x: 28, y: 6 }, { x: 18, y: 15 }]) spots.push(p);
   for (let i = 1; i < n; i++) {
     const cand = spots.filter((p) => far(p.x, p.y) && !(name === 'fire' && base.fire.origins.some((o) => Math.hypot(o.x - p.x, o.y - p.y) < 4)));
@@ -160,6 +161,18 @@ function addCasualties(name, base, n, opts) {
     taken.push({ x, y });
     const prof = randomProfile(rng, { casualtyWeight: opts.casualtyWeight ? Math.max(35, opts.casualtyWeight - 8 * i) : undefined });
     const cas = { id: 'C' + (i + 1), x, y, ...prof, healthStart: Math.round(rng.range(45, 100)) };
+    if (name === 'water') cas.clinging = true;
+    if (name === 'collapse') { const k = y * base.W + x; base.type[k] = T.FLOOR; base.weight[k] = 0; }
+    base.casualties.push(cas);
+  }
+  // Animals (dogs) found in the same incident: lighter, no spinal or dignity rules, rescued after the people.
+  const na = Math.max(0, Math.min(3, Math.round(opts.animals ?? 0)));
+  for (let j = 0; j < na; j++) {
+    const cand = spots.filter((p) => far(p.x, p.y) && !(name === 'fire' && base.fire.origins.some((o) => Math.hypot(o.x - p.x, o.y - p.y) < 4)));
+    if (!cand.length) break;
+    const p = rng.pick(cand), x = p.x + (name === 'fire' ? rng.int(-2, 2) : 0), y = p.y + (name === 'fire' ? rng.int(-1, 1) : 0);
+    taken.push({ x, y });
+    const cas = { id: 'D' + (j + 1), x, y, animal: true, species: 'dog', age: 'animal', weightKg: Math.round(rng.range(8, 40)), conscious: true, unclothed: false, spinal: false, healthStart: Math.round(rng.range(60, 100)) };
     if (name === 'water') cas.clinging = true;
     if (name === 'collapse') { const k = y * base.W + x; base.type[k] = T.FLOOR; base.weight[k] = 0; }
     base.casualties.push(cas);

@@ -13,7 +13,7 @@ const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const fmt = (n, d = 1) => Number(n).toFixed(d);
-const SEEDS = { fire: 4, water: 5, collapse: 4, well: 3 };
+const SEEDS = { fire: 4, water: 4, collapse: 4, well: 3 };
 const UCOL = { A: '#3b82c4', B: '#8b5cf6', C: '#d97706' };
 
 let mode = 'local', sim = null, deployed = false, held = false, speed = 2, acc = 0, last = 0, alarmSeen = 0, logN = 0;
@@ -23,7 +23,7 @@ const scn = () => (mode === 'remote' && hello ? hello.scn : $('inScn').value);
 
 // ---------------------------------------------------------------- local simulation
 function make() {
-  const o = { seed: Number($('inSeed').value) || 1, autoCommander: $('chkAuto').checked, commanderDelay: 4, casualtyWeight: Number($('inWeight').value), casualtyCount: Number($('inCount').value), robots: Number($('inRobots').value), transitHarvest: true };
+  const o = { seed: Number($('inSeed').value) || 1, autoCommander: $('chkAuto').checked, commanderDelay: 4, casualtyWeight: Number($('inWeight').value), casualtyCount: Number($('inCount').value), animals: Number($('inAnimals').value), robots: Number($('inRobots').value), transitHarvest: true };
   if ($('inScn').value === 'well') return new WellSimulation({ seed: o.seed, depthM: 14, gas: true, autoCommander: o.autoCommander, commanderDelay: 4, casualtyWeight: o.casualtyWeight, who: 'child', where: 'water', widthM: 1.4 });
   return new Simulation($('inScn').value, o);
 }
@@ -38,8 +38,8 @@ function setDeployButton(isDeployed) {
 
 // ---------------------------------------------------------------- actions (local or sent to the laptop)
 function actDeploy() {
-  if (mode === 'remote') { link.send({ t: 'deploy' }); return; }
-  if (deployed) return; deployed = true; sim.emit('Operator', 'info', 'Operator signal: DEPLOY. The units go in autonomously; no manual steering.'); setDeployButton(true);
+  if (mode === 'remote') { link.send({ t: 'standing', on: $('chkStanding').checked }); link.send({ t: 'deploy' }); return; }
+  if (deployed) return; sim.opts.standingApproval = $('chkStanding').checked; deployed = true; sim.emit('Operator', 'info', 'Operator signal: DEPLOY. The units go in autonomously; no manual steering.'); setDeployButton(true);
 }
 function actCommand(text, source) {
   if (!text.trim()) return;
@@ -74,7 +74,7 @@ function map(v) {
     g.fillStyle = col; g.fillRect(x * C, y * C, C, C);
     const f = fire.get(i); if (f) { g.fillStyle = `rgba(255,${Math.round(150 - 100 * f)},30,${0.35 + 0.6 * f})`; g.fillRect(x * C, y * C, C, C); }
   }
-  for (const h of v.heads ?? []) { g.fillStyle = '#e98a3c'; g.beginPath(); g.arc((h[0] + 0.5) * C, (h[1] + 0.5) * C, C * 0.5, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `${Math.max(9, C * 0.6)}px system-ui`; g.fillText(h[2], (h[0] + 1) * C, h[1] * C); }
+  for (const h of v.heads ?? []) { g.fillStyle = h[3] ? '#b07a45' : '#e98a3c'; g.beginPath(); g.arc((h[0] + 0.5) * C, (h[1] + 0.5) * C, C * 0.5, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `${Math.max(9, C * 0.6)}px system-ui`; g.fillText(h[2], (h[0] + 1) * C, h[1] * C); }
   for (const u of v.units) { g.fillStyle = UCOL[u.id]; g.beginPath(); g.arc((u.x + 0.5) * C, (u.y + 0.5) * C, C * 0.6, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `bold ${Math.max(9, C * 0.7)}px system-ui`; g.fillText(u.id, (u.x + 0.2) * C, (u.y + 0.95) * C); }
   const now = performance.now() / 1000;
   for (const a of v.alarms) { if (v.time - a.t > 40) continue; const ph = (now * 0.9) % 1; g.strokeStyle = a.kind === 'human' ? `rgba(255,70,70,${1 - ph})` : `rgba(90,200,255,${1 - ph})`; g.lineWidth = 2; g.beginPath(); g.arc((a.x + 0.5) * C, (a.y + 0.5) * C, C + ph * C * 3, 0, 7); g.stroke(); }
@@ -158,6 +158,7 @@ else {
 
 // ---------------------------------------------------------------- wiring
 $('btnDeploy').onclick = actDeploy;
+$('chkStanding').onchange = () => { if (mode === 'remote') link.send({ t: 'standing', on: $('chkStanding').checked }); else if (sim) sim.opts.standingApproval = $('chkStanding').checked; };
 $('btnHold').onclick = () => { if (mode === 'remote') { held = !held; link.send({ t: 'cmd', text: held ? 'hold position' : 'resume', source: 'button' }); $('btnHold').textContent = held ? 'Resume' : 'Hold'; return; } held = !held; $('btnHold').textContent = held ? 'Resume' : 'Hold'; };
 let linkUpLocal = true;
 $('btnLink').onclick = () => { linkUpLocal = !(vm && vm.linkUp === false); actLink(!linkUpLocal); $('btnLink').textContent = linkUpLocal ? 'Restore link' : 'Cut link (test)'; };
@@ -166,9 +167,9 @@ $('btnSound').onclick = () => playAlarm('human');
 $('btnPair').onclick = () => connect($('inPair').value); $('inPair').onkeydown = (e) => { if (e.key === 'Enter') connect($('inPair').value); };
 $('btnUnpair').onclick = disconnect;
 $('btnPing').onclick = () => { if (mode !== 'remote') { $('vReply').textContent = 'Link test: not paired with a laptop (this page is running its own simulation).'; return; } pingAt = Date.now(); link.send({ t: 'ping', n: pingAt }); $('vReply').textContent = 'Link test: sent, waiting...'; setTimeout(() => { if (pingAt && $('vReply').textContent.endsWith('waiting...')) $('vReply').textContent = 'Link test: NO ANSWER from the laptop. The link is not working.'; }, 3500); };
-for (const id of ['inScn', 'inCount', 'inRobots', 'inWeight', 'inSeed', 'chkAuto']) $(id).onchange = () => { if (id === 'inScn') $('inSeed').value = SEEDS[$('inScn').value]; restartLocal(); };
+for (const id of ['inScn', 'inCount', 'inAnimals', 'inRobots', 'inWeight', 'inSeed', 'chkAuto']) $(id).onchange = () => { if (id === 'inScn') $('inSeed').value = SEEDS[$('inScn').value]; restartLocal(); };
 $('inSpeed').onchange = () => { speed = Number($('inSpeed').value); };
 if (q.get('scenario')) { $('inScn').value = q.get('scenario'); $('inSeed').value = SEEDS[$('inScn').value] ?? 1; }
-if (q.get('seed')) $('inSeed').value = q.get('seed'); if (q.get('speed')) $('inSpeed').value = q.get('speed'); if (q.get('weight')) $('inWeight').value = q.get('weight'); if (q.get('robots')) $('inRobots').value = q.get('robots'); if (q.get('count')) $('inCount').value = q.get('count');
+if (q.get('seed')) $('inSeed').value = q.get('seed'); if (q.get('speed')) $('inSpeed').value = q.get('speed'); if (q.get('weight')) $('inWeight').value = q.get('weight'); if (q.get('robots')) $('inRobots').value = q.get('robots'); if (q.get('count')) $('inCount').value = q.get('count'); if (q.get('animals')) $('inAnimals').value = q.get('animals');
 restartLocal(); requestAnimationFrame(frame);
 if (q.get('pair')) { $('inPair').value = cleanCode(q.get('pair')); connect(q.get('pair')); }

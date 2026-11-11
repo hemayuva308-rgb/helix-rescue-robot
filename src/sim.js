@@ -190,6 +190,7 @@ export class Simulation {
     if (this.approvals.has(kind + ':' + ref)) return;
     const a = { id: `${kind}-${ref}-${this.t}`, kind, ref, role, reason, requestedAt: this.t, deadline: this.t + this.params.approvalTimeout, status: 'pending' };
     if (this.opts.autoCommander && this.opts.commanderResponsive !== false) a.autoAt = this.t + (this.opts.commanderDelay ?? Math.round(this.rng.range(3, 9)));
+    else if (this.opts.standingApproval && kind !== 'medic' && this.opts.commanderResponsive !== false) { a.autoAt = this.t + 4; a.standing = true; } // DEPLOY from the operator counts as a standing approval for lifts and alerts; a medic's approval (spinal injury) still needs a person
     this.pending.push(a);
     this.emit('Dispatch', 'approval', `Approval requested from ${role}: ${reason}`, { kind, ref });
   }
@@ -198,7 +199,7 @@ export class Simulation {
     if (!a) return false;
     a.status = 'approved'; a.at = this.t;
     this.approvals.add(a.kind + ':' + a.ref);
-    this.emit('Commander', 'approval', `${a.role} APPROVED: ${a.kind} (${a.ref})`, { kind: a.kind });
+    this.emit('Commander', 'approval', `${a.role} APPROVED${a.standing ? ' (standing authorisation given with DEPLOY)' : ''}: ${a.kind} (${a.ref})`, { kind: a.kind });
     if (a.kind === 'dispatch') this.sendAlert(a.ref);
     return true;
   }
@@ -659,7 +660,7 @@ export class Simulation {
   verifiedCandidate() {
     const list = this.candidates.filter((c) => c.status === 'verified' && !c.handled && (!this.multi || this.casualtyFor(c)));
     if (!this.multi || list.length < 2) return list[0];
-    const scored = list.map((cand) => { const k = this.casualtyFor(cand); return { cand, k, tt: k ? this.timeToHazard(k) : Infinity }; }).sort((a, b) => a.tt - b.tt);
+    const scored = list.map((cand) => { const k = this.casualtyFor(cand); return { cand, k, tt: k ? this.timeToHazard(k) : Infinity }; }).sort((a, b) => (a.k?.animal ? 1 : 0) - (b.k?.animal ? 1 : 0) || a.tt - b.tt); // people first, then animals, most critical first
     const seen = new Set(), uniq = scored.filter((s) => s.k && !seen.has(s.k.id) && seen.add(s.k.id));
     const msg = `Triage: ${uniq.map((s) => `${s.k.id} (${Number.isFinite(s.tt) ? s.tt.toFixed(0) + 's left' : 'stable'})`).join(', ')}: most critical first`;
     if (uniq.length > 1 && msg !== this._triageMsg) { this._triageMsg = msg; this.emit('Mission', 'info', msg); }
@@ -752,7 +753,7 @@ export class Simulation {
     m.casualty = c; c.claimedBy = this.cur.id;
     const est = c.weightKg * (1 + this.rng.range(-0.08, 0.08));
     c.estimate = est;
-    this.emit('Mission', 'info', `Casualty profile (non-visual body scan): about ${est.toFixed(0)} kg, ${c.age}, ${c.conscious ? 'conscious' : 'unconscious'}${c.unclothed ? ', unclothed' : ''}${c.spinal ? ', spinal injury suspected' : ''}`);
+    if (c.animal) this.emit('Mission', 'info', `Casualty profile (heat camera and radar): an animal (${c.species}), about ${est.toFixed(0)} kg. Rescued after the people.`); else this.emit('Mission', 'info', `Casualty profile (non-visual body scan): about ${est.toFixed(0)} kg, ${c.age}, ${c.conscious ? 'conscious' : 'unconscious'}${c.unclothed ? ', unclothed' : ''}${c.spinal ? ', spinal injury suspected' : ''}`);
     if (this.multi && this.scenario === 'fire' && this.gateOn) {
       const fx = Math.round(c.fx), fy = Math.round(c.fy); let near = this.tempAt(fx, fy) > p.carryTempLimit * 0.6;
       for (let dy = -3; dy <= 3 && !near; dy++) for (let dx = -3; dx <= 3; dx++) { const nx = fx + dx, ny = fy + dy; if (this.inB(nx, ny) && this.fireI[this.idx(nx, ny)] > 0.3) { near = true; break; } }
