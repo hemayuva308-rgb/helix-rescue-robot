@@ -33,13 +33,13 @@ The robot itself is described in `robot/helix.urdf` (links, joints, limits, mass
 
 | Area | Status |
 | --- | --- |
-| Decision layer, safety gate, approvals, audit log, triage, fleet, distress calls, operator console, 4 scenarios | Working in simulation, 46 automated tests, reproducible evaluation (single unit, single casualty) |
+| Decision layer, safety gate, approvals, audit log, triage, fleet, distress calls, operator console, 4 scenarios | Working in simulation, 72 automated tests, reproducible evaluation (single unit, single casualty) |
 | Hardware abstraction (`src/hal.js`) | Designed and tested for the fire, flood and collapse gate. The well gate, fleet and operator console are not yet routed through it |
 | Robot body (`robot/helix.urdf`) | Kinematic description only. Masses, torques, joint limits are assumptions. Walking is an animation, not physics |
 | Sensors | Simulated readings. No real sensor data has been used or validated |
 | Locomotion, balance, carrying 90 kg, swimming, heat tolerance | Not built, not simulated with physics, not tested |
 | Energy harvesting, winch, tether, rescue pod | Design concepts |
-| Operator link | The handheld screen runs on the same simulation. No radio, no latency, no link-loss behaviour yet |
+| Operator link | The phone pairs with the laptop (WebRTC through a public broker, or a same-browser channel) and link loss is simulated: units hold and raise an alarm. Not tested over a real radio link, with real latency, or on a real field network |
 | Certification, emergency stop, explosion-proof and waterproof rating | Not started |
 
 Verdict: **the software architecture is ready to be attached to hardware; a robot is not ready to be built from this yet.**
