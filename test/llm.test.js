@@ -64,7 +64,7 @@ test('reasoning text in <think> tags is removed from the answer', async () => {
 
 test('the reason a fallback was used is reported, without any secret', async () => {
   const none = await handle('brief', { time: 1 }, {});
-  assert.match(none.body.why, /not configured/);
+  assert.match(none.body.why, /no AI provider is configured/);
   const bad = await mock('x', 401);
   const failed = await handle('brief', { time: 1 }, { LLM_BASE_URL: bad.url, LLM_API_KEY: 'top-secret', LLM_MODEL: 'm' }, 'ip10');
   bad.srv.close();
