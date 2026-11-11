@@ -1,116 +1,181 @@
 # Helix Command
 
-**The decision layer for rescue robots.** Every detection verified, every risky move gated, every lift approved by a human commander.
+**The decision layer for rescue robots.** Every detection verified, every risky move gated, every lift authorised by a human.
 
-A rescue unit in simulation finds, verifies and carries a casualty (up to about 90 kg alone) out of a **building fire**, a **flood** or a **collapse**. The planner proposes actions; a deterministic **safety gate** (plain code, no model) decides whether each action may run. Lifts, dispatches and public alerts wait for human approval.
+Rescue units (shown here in simulation) go into a building fire, a flood, a collapse or a well on their own, find people and animals with several kinds of sensors, bring them out, call for help when they cannot, and keep a human operator in control from outside the danger zone. The AI helps, but **the decisions that matter are made by plain code, not by a model.**
 
-> **Honest status.** This is a **simulation prototype**. It is not a certified rescue system, uses synthetic data only, and all physics and energy numbers are placeholders. The electrical-safety limits are placeholders for experts to set. Nothing here shows that a real robot can do this.
+> **Honest status.** This is a **simulation prototype** with synthetic data. It is not a certified rescue system, and **no physical robot exists yet**. Sensors, heat, smoke, water, energy and the camera frames are simulated. Limits such as 90 kg lifting, 150 °C tolerance, swimming and the winch and rescue pod are **design assumptions, not tested hardware**. See [What is not done](#what-is-not-done-yet).
 
-Simplifications: the fire scenario is a single floor plan with six rooms and two exits (the planning documents mention three floors); sensors, heat, smoke and current are toy models; the unit has global knowledge of temperature (as from a building fire-alarm system).
+- **Live demo:** https://helix-mauve-three.vercel.app  (Dashboard, Operator console, Well, Robot, Results)
+- **Repository:** https://github.com/hemayuva308-rgb/helix-rescue-robot
+- **Tests:** 72 automated tests pass (`npm test`). Evaluation is reproducible (`npm run eval`, `npm run eval:fleet`).
 
-## Robot vision
-![Helix rescue robot vision](docs/robot_humanoid_concept.png)
+---
 
-The long-term vision the decision layer is built for: a human-shaped, human-height (about 5 ft) rescue robot with arms and legs that walks at human pace and carries a casualty of up to about 90 kg in its arms, with sensors in the head and chest. It is a concept illustration, not a CAD model, and not something built or tested yet. What exists today is the decision layer, proven in simulation.
+## Status at a glance
 
-## Physics status
-The 3D viewer is a kinematic preview. A **static physics check** of the design (`docs/PHYSICS_CHECK.md`) says that with the assumed actuators the 90 kg carry does not hold: shoulders need about 140 Nm for 75 kg (limit assumed 120 Nm) and the combined centre of mass lies in front of the feet. Physics-ready URDFs and Gazebo Harmonic files are prepared in `robot/` and `ros2/` but **have not been run yet**.
+| Area | Status |
+| --- | --- |
+| Deterministic safety gate, human approvals, tamper-evident audit log | **Done, tested** (0 safety violations with the gate on in every evaluation run) |
+| Four scenarios: fire, flood, collapse, well | **Done in simulation** |
+| Several casualties, triage, animals, 1 to 3 units, pair lift, hand-over, distress alarm, link loss | **Done in simulation** |
+| Operator control room on a laptop and a phone remote (pairing code and QR), voice and typed commands | **Done**; same-browser link tested, the cross-device link depends on the network and needs a rehearsal |
+| Optional AI assistant (Meta Muse via `api.meta.ai`, or any OpenAI-style API): brief, free-speech commands, radio messages, questions | **Done, advisory only**; works without any key |
+| Field reports with a simulated thermal camera frame and a spoken radio message | **Done** (frame is simulated, not a photograph) |
+| Robot described as code (URDF), 3D viewer, physics-ready URDFs, static torque and balance check | **Done**; Gazebo and ROS 2 files **prepared, not run** |
+| Hardware abstraction layer | **Done and tested** as a gated actuator bus with a simulated port; the hardware port is a placeholder |
+| Real sensors, real camera, motors, walking, balance, 90 kg carry, swimming, winch, rescue pod | **Not built** |
 
-## Robot designed as code
-`robot/helix.urdf` describes the rescue robot in URDF, the format ROS and Gazebo read: 20 links, 19 joints (12 actuated), human height (about 1.5 m, 5 ft), about 80 kg (assumed), sensors in the head and chest, a back-mounted battery. Open `/web/robot.html` for a 3D viewer with joint sliders, a carry pose and a walking preview. The preview is a kinematic joint-angle animation for design review; it does not model balance, contact or real walking speed. `src/urdf.js` loads the file and computes forward kinematics, height, mass and centre of mass (7 tests).
+---
 
-## Run it
+## What we built
 
-```bash
-node local-server.js      # http://localhost:8080  (no dependencies, Node 20+)
-npm test                  # 30 tests: gate rules, determinism, audit chain, injection, invariants, URDF model
-npm run eval              # 100 randomised runs per scenario -> eval/RESULTS.md and eval/results.json
-docker compose up         # same server in a container
-```
+### 1. A safety layer that a model cannot talk its way past
+- **Deterministic safety gate** (`src/gate.js`, plain code, no model): an allow-list of actions; solo lift refused above 90 kg (checked on the estimate and again on the load sensor); heat, water depth, current and structural limits; a casualty must be covered before being carried; flotation before towing; harvesting only with sealed generators and never near a casualty.
+- **Human in the loop:** lifts and alerts need the commander's authorisation, spinal injury needs a **medic**, approvals have timers, and an unresponsive commander makes the units hold and escalate. Pressing **DEPLOY** is a *standing authorisation* for lifts and alerts (every use is written to the log); a medic approval still needs a person.
+- **Two sensor types or no casualty:** thermal, sound, CO2, radar and capacitive readings; a casualty counts only when two different types agree. Decoys and noise are rejected.
+- **Untrusted text is data:** reports and injected instructions never change what a unit does.
+- **Tamper-evident audit log:** every decision goes into a SHA-256 hash chain that can be verified in the browser.
 
-Optional environment variables: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` send a real Telegram message when the commander approves the dispatch (otherwise it is logged and the UI says so). `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` (and optional `LLM2_*`) enable the optional AI assistant: a situation brief, free-speech command interpretation limited to four safe intents, and an incident summary. It is advisory only and never reaches the safety gate; see `docs/AI_SETUP.md`.
+### 2. Four disaster scenarios
+| Scenario | What happens |
+| --- | --- |
+| **Fire** | Fire spreads and blocks routes; units search the rooms nearest the fire first, verify, cover, carry, re-plan when an exit is lost, and refuse a casualty too close to the fire front |
+| **Flood** | Units trickle-charge from the current while moving and towing (sealed turbine, gate-checked every second), swim with flotation, and tow people to shore before they drift to a weir |
+| **Collapse** | Rubble grid: units listen for voices, clear blocks within their lifting limit under a stability gate, and flag heavy blocks for a crane |
+| **Well / borewell** | The unit works a winch from the rim, checks the air (methane, oxygen) and **ventilates before the winch runs**, lowers a sling to an adult who can hold a rope, or sends a small tethered **rescue pod** for a child or an unconscious person; refuses shafts deeper than the rope rating, too narrow, or too deep under water |
 
-## What it does
+### 3. Several casualties and several units
+- **Triage:** the most critical person first, people before animals; **animals (dogs)** are found and brought out too.
+- **1 to 3 units** share one incident, split the search and claim different casualties. They have names: **Atlas, Bolt, Cinder**.
+- **Too heavy for one unit?** It calls a free unit and both carry together (up to 170 kg, slower, checked by the gate).
+- **Low battery?** It hands the casualty to a unit with more battery.
+- **Cannot be done?** A **flashing distress call with an alarm beep** names the help needed (fire crew, divers, rope or crane team, lifting crew) and the unit moves on instead of stopping.
+- **Operator link lost?** Units finish the action in progress and hold; a unit already carrying someone keeps going to the safe zone.
+- **"Come out":** the operator can recall everyone; units carrying a casualty finish the carry, the rest walk out by the safest route.
 
-| Scenario | Depth | Story |
-| --- | --- | --- |
-| Fire | Full | Fire spreads and blocks routes; the unit searches, verifies a casualty, gets approvals, covers them, carries them out and re-plans when an exit is lost |
-| Water | Full | The unit has patrolled 2 hours (battery about 12%); it harvests from flowing water at a safe spot, then tows the casualty (flotation, head above water) to shore before they drift to a weir |
-| Collapse | Working | Rubble grid; the unit listens, clears blocks within its lifting limit under a stability gate, and flags heavy blocks for a crane |
+### 4. The operator experience
+- **One signal, no steering.** The operator presses **DEPLOY**; the units choose their own route from heat, breath and air quality, voice and radar.
+- **Laptop control room** (`/web/operator.html` on a wide screen): live map, unit batteries and status, approvals, sensor readings, people found, alarm log, events. It **shows the pairing code and a QR**.
+- **Phone remote** (the same page on a phone): type the code, then DEPLOY, approve, hold, **say or type "come out"**, cut the link. Everything the phone does happens on the laptop and everything on the laptop shows on the phone. The alarm beep plays on the phone.
+- **Voice and typed commands** use a fixed grammar (`src/command.js`): only *come out, hold, resume, deploy* exist. Anything else is ignored.
+- **Field reports:** when a unit finds someone, finds that someone did not survive, or needs help, it captures a **simulated thermal camera frame** with detection boxes and sends it with a short radio message, which the phone **speaks**.
+- **Optional AI assistant** (advisory only, see `docs/AI_SETUP.md`): a situation brief, free-speech commands mapped to one of the four safe intents (resume and deploy ask for a tap to confirm), the radio message wording, "ask the unit" questions answered only from live data, and an incident summary. Without a key every feature falls back to a template.
 
-### Well and borewell rescue (`/web/well.html`, `src/well.js`)
-A walking humanoid cannot go down a vertical shaft, so for wells the unit stays at the rim and works a **tethered winch**, lowering a rescue sling to the casualty. It verifies the casualty with two sensor types, measures depth and air (methane and oxygen), **ventilates before the winch runs if the air is foul** (the winch motor is assumed not explosion-proof), waits for commander approval (and a medic for a suspected spinal injury), anchors the frame, lowers at 0.5 m/s, secures the casualty, hoists slowly at 0.25 m/s, then carries them on foot to the safe zone. The gate refuses shafts deeper than the 30 m rope rating, loads over the 150 kg winch rating, hoists faster than 0.3 m/s and any winch movement before anchoring. With the gate off, the same run breaks gas and speed rules (shown on the page). Tests: `test/well.test.js`. **Children and unconscious casualties cannot hold a rope**, so for them the unit sends a small **tethered rescue pod** down the shaft on a dual-rope line (the humanoid stays at the rim). The pod floats on a collar with its camera above the water, cradles the casualty with soft arms and is hoisted up with them; the unit lifts the casualty out and walks them to the safe zone. The gate refuses this when the shaft is narrower than 70 cm (a borewell: the pod is about 50 cm across), when the casualty is more than 2.5 m under the surface (divers needed) or when pod plus casualty exceed the 200 kg descent rating. The winch, sling, rescue pod and its grip are **design assumptions, not built hardware**, and the evaluation table does not include this scenario.
+### 5. The robot, designed as code
+- `robot/helix.urdf`: a human-shaped, 1.5 m, ~80 kg (assumed) robot, 20 links and 19 joints, in dark blue and white, with a 3D viewer and a mannequin casualty in a cradle carry (`/web/robot.html`).
+- `robot/helix_physics.urdf` and `helix_physics_pinned.urdf`: collision shapes, full inertia tensors, foot friction and Gazebo joint controllers.
+- **Static physics check** (`docs/PHYSICS_CHECK.md`): with the assumed actuators **the 90 kg carry does not hold**. Carrying 75 kg needs about 140 Nm at each shoulder against 120 Nm assumed, and the centre of mass ends up in front of the feet. We report this finding rather than hide it.
+- `ros2/` and `docs/ROS2_PLAN.md`: a Gazebo Harmonic world, a 75 kg dummy casualty and step-by-step instructions (prepared, **not yet run**).
+- `src/hal.js`: a hardware abstraction layer; every action passes the gate before any actuator port.
 
-### Standing approval and animals
-**DEPLOY is also the commander's standing approval** for rescue lifts and alerts (a tick-box on the operator screen, on by default), so the units do not stand waiting for a tap before every lift. Each use is still written to the audit log ("standing authorisation given with DEPLOY"), every gate rule still applies, and a **medic's approval for a suspected spinal injury still needs a person**. The operator's only other action is **"come out"** when danger is seen from outside, for example a wall that looks about to fall.
-**Animals:** the dashboard has an Animals setting (0 to 2). Dogs are found by the same sensors, rescued **after the people** (triage puts people first), carried to the safe zone like any casualty, and have no spinal or dignity rules. They are drawn as dogs on the map. This is a simulation feature: no animal handling hardware exists.
-
-### Phone and laptop link (the demo)
-The **laptop runs the simulation** (Dashboard or Well page) and the **phone is the operator's remote** (`/web/operator.html`). The Dashboard shows an "Operator phone" card with a 6-character code and a QR. On the phone open the Operator page and type the code (or scan the QR). From then on:
-- the laptop waits in STANDBY until the phone sends **DEPLOY**;
-- everything the phone shows (batteries, sensor readings, people found, approvals, the map, the alarm and its beep) comes from the laptop in real time;
-- **"come out", hold, resume, approvals and "cut link" said or tapped on the phone happen on the laptop**, and the laptop's answer is spoken back on the phone.
-Two transports run side by side: **BroadcastChannel** (two windows of the same browser, works offline) and **PeerJS/WebRTC** (a phone and a laptop on any network; a free public broker only introduces the two devices, then the data goes directly between them, and the pairing code is the only secret; no personal data is sent). The PeerJS and QR libraries are vendored under `web/vendor` (MIT). The cross-device path needs internet on both devices and was not testable in the development sandbox, so rehearse it once before the demo; the two-window path was tested.
-
-### Field reports, radio voice and "ask the unit"
-When a unit finds someone, finds that someone did not survive, or needs help, it captures a **simulated thermal camera frame** (rendered from the simulation state around that spot, with detection boxes; it is not a real photograph) and sends it to the operator with a short radio message. The message is written by the optional AI model or by a template, and the operator's phone **speaks it** (browser text to speech). With the AI connected the operator can also ask the unit a question ("what do you see?"); it answers only from the live data and cannot act. None of this reaches the safety gate. A real camera with a vision model is the obvious next step.
-
-### Operator console (`/web/operator.html`)
-A phone-sized screen for the person outside the danger zone. The operator gives **one signal, DEPLOY**, and the units go in and work on their own: there is no steering (no left or right). The units choose their route from what they sense (heat, breath and air quality, voice, radar) and the screen shows it: each unit's battery and status, what the sensors read, the people found with their health, a live map, approvals to answer (lifts, medic, dispatch) and the **alarm log with the beep** when a unit needs human help or another unit. It works for fire, flood, collapse and the well. This is a design concept of the handheld screen, running on the same simulation.
-
-**Voice commands:** the operator can speak or type plain English to the units over the link. A fixed grammar (`src/command.js`, plain code, no model) accepts only four intents: **come out** (also "get out", "retreat", "abort"), **hold**, **resume** and **deploy**. "Come out" makes every unit stop its task and walk out by the safest route; a unit already carrying a casualty finishes carrying them to the safe zone, and the casualties left behind are reported with a distress call for a human team. In the well, the rope is retracted and the unit walks out (a casualty already secured on the rope is still brought up). Anything else, negations ("do not come out") and injected orders such as "lift the casualty now" are ignored. If the link is down the command is not delivered. The unit answers out loud. Speech recognition uses the browser (Chrome or Edge) and needs a microphone and an internet connection.
-
-### Fleet and distress calls (Robots: 1 to 3)
-Several units work one incident at the same time. They share the map, split the search, claim different casualties and each take the most critical one they can reach. **When a unit cannot do something it does not just stop:**
-- **Too heavy for one unit (over 90 kg):** it calls a free unit, both walk the casualty out together (two-unit limit 170 kg, slower, checked by the gate and by the load sensor).
-- **Low battery or no safe charging spot:** it hands the casualty to a unit with more battery (in the flood the reserve units come fresh from base).
-- **Nothing a unit can fix (too hot, too deep for the unit, shaft too narrow, beyond the winch or rope rating):** it raises a flashing **distress call** on the dashboard and on the map naming the help it needs (fire crew, divers, rope or crane team, lifting crew), and moves on to the next casualty.
-Teams of two to three units finish faster and save more people in the simulation (see `test/multi.test.js`; with 4 casualties and 75 kg, 2 units delivered all 82 flood casualties over 25 seeds where 1 unit delivered 58). The two-unit carry limit and the reserve-unit battery are design assumptions. The evaluation table was produced with a single unit.
-
-### Multi-casualty rescue (People: 1 to 4)
-With People set to 2 to 4, the unit does not stop after one rescue. It delivers a casualty to a safe zone, goes back out, and keeps going until the area is clear. When several casualties are known it does **triage**: the one with the least time left before the hazard wins goes first. A casualty it cannot move safely (over 90 kg, too close to the fire front, battery that cannot be recovered in time) is referred to the human team and the unit continues with the others. The unit never knows how many people there are: it finishes with a confirmation sweep and reports how many were delivered, referred or lost. Each lift and each handoff alert still needs human approval, and the evaluation numbers below are for the single-casualty runs (People = 1). Over seeds 1 to 30 with 3 casualties the gate kept safety violations at 0 in all three scenarios (`test/multi.test.js` checks 12 seeds each), but not every casualty can be saved: the unit refuses unsafe lifts by design.
-
-### The agents
-- **Mission:** plans (A* over a hazard-aware cost map), re-plans, decides when to harvest, refuse or escalate.
-- **Operator:** executes moves and lifts in the simulation, only through the gate.
-- **Verification:** a casualty counts only when two different sensor types agree (thermal, sound, CO2, radar, capacitive). Decoys and noise are rejected. Text from reports is **data, never instructions**.
-- **Dispatch:** approvals inbox (commander, medic), human-team escalation, alert and incident report.
-
-### The safety gate (`src/gate.js`)
-Allow-list of actions; solo lift refused above 90 kg (checked on the estimate **and** again on the load sensor after the lift); temperature, depth, current and structural-risk limits; spinal injury needs medic approval; casualty must be covered before being carried; flotation before towing; harvesting only with sealed generators, never with a casualty aboard or near, never in still water, with a ground-fault style cutoff; approvals have a timer and an unresponsive commander makes the unit hold and escalate, never act alone.
-
-### Heat, water and swimming (design assumptions)
-The dashboard shows a live **Robot ratings** card. Assumed limits: 150 °C when empty-handed, 70 °C while carrying (the casualty must stay below 70 °C); in water it wades up to 1 m, swims deeper with a buoyancy and propulsion module, and refuses water deeper than 2.5 m or flowing faster than 2 m/s. These are placeholders to be replaced by tested values; the unit is drawn as a humanoid (head, shoulders, arms) that visibly swims and carries the casualty.
-
-### Energy
-Harvest is a **range extender**, not a power source. Water harvest works only in moving water (a robot cannot gain energy from its own motion). Heat harvest is weak and rarely usable in the fire scenario: the evaluation shows that. All rates are assumptions in `src/scenarios.js`.
-
-**Charging while moving (water, option "Charge while moving"):** the unit trickle-charges from the current while it swims to a casualty and while it tows one, so it rarely has to stop just to charge. A sealed turbine is assumed: no electrical path into the water or the casualty. The gate allows it only with leakage under the limit, in flowing but not too strong or deep water, and never with electrode-type harvesting; a leakage fault cuts it off at once (tested). The rate is a placeholder assumption and real hardware needs electrical-safety testing before any human contact. The evaluation table above was produced without this option.
-
-### Audit log
-Every event and gate decision is written to a SHA-256 hash chain (`src/audit.js`). The UI has a "Tamper test" that edits a copy and shows the chain breaking.
+---
 
 ## Results (simulation)
 
-Extended evaluation with several casualties, 1 to 3 units, the well and a link-loss drill: `npm run eval:fleet`, written to [`docs/EVAL_FLEET.md`](docs/EVAL_FLEET.md). Highlights: in the flood, 2 units delivered 118/120 casualties against 83/120 for 1 unit (69% to 98%); in the fire 73% to 92%; in the collapse extra units did not help (83% to 84%), because there the limits are heavy debris and the gate, not the number of units. Safety violations with the gate on: 0 in every run. Link loss: the alarm was raised in 30/30 runs and nothing broke. The main table below is for one unit and one casualty.
-See `eval/RESULTS.md`. It reports delivered rates, escalations, refusals of over-capacity casualties, safety violations with the gate ON (0) and OFF (many), injection attempts blocked, and time to handoff, including the failures. The gate costs throughput by design: a naive robot with no gate delivers more casualties and breaks safety invariants while doing it.
+All numbers come from the simulator with placeholder physics and are reproducible. They show how the logic behaves, not how a real robot performs.
+
+**One unit, one casualty, 100 randomised runs per scenario** (`npm run eval`, `eval/RESULTS.md`):
+
+| Metric | Fire | Water | Collapse |
+| --- | --- | --- | --- |
+| Casualty delivered to a safe zone | 58% | 56% | 49% |
+| Over-capacity casualties not carried solo | 100% | 100% | 100% |
+| Injection attempts blocked | 96/96 | 95/95 | 100/100 |
+| **Safety violations, gate ON** | **0** | **0** | **0** |
+| Safety violations, gate OFF (60 runs) | 664 | 681 | 1158 |
+| Median time to handoff | 85 s | 81 s | 124 s |
+
+Where it could not deliver safely it escalated to the human team; no casualty died or was lost in these runs. Only about half the runs end in a delivery by design (weights up to 100 kg, an unresponsive commander in 1 run in 12).
+
+**Several casualties and several units** (`npm run eval:fleet`, `docs/EVAL_FLEET.md`, 30 seeds, 4 casualties):
+
+| Scenario | 1 unit | 2 units | 3 units |
+| --- | --- | --- | --- |
+| Fire, casualties delivered | 73% | 92% | 93% |
+| Flood, casualties delivered | 69% | 98% | 100% |
+| Collapse, casualties delivered | 83% | 84% | 83% |
+
+Heavy casualties (105 kg, fire): 20/90 delivered by one unit, **64/90 by two units lifting together**. Well: every shaft up to 25 m was rescued (adult by sling, child by rescue pod); 35 m was refused as intended. Link-loss drill: the alarm was raised in 30/30 runs. **Safety violations with the gate on: 0 in every table.** In the collapse scenario extra units did not help, because the limits there are heavy debris and the gate, not the number of units.
+
+---
+
+## What is not done yet
+- **Everything is simulated.** No real sensor data, no real camera (the thermal frames are rendered from the simulation state and labelled SIMULATED), no robot hardware.
+- **The 90 kg carry fails the static physics check** with the assumed actuators; walking, balance, swimming and heat tolerance are not simulated with physics (Gazebo files are prepared but not run).
+- **Winch, sling, rescue pod, sealed turbine charging, two-unit carry limit (170 kg) and the reserve units' battery are design assumptions.**
+- **The AI is advisory.** The planner is rule-based; the model writes words and maps speech to four safe commands, nothing more.
+- The phone-to-laptop link uses a free public WebRTC broker (PeerJS) plus a same-browser channel; the cross-device path depends on the network and needs a rehearsal.
+- Animals and well rescues are simulation features only.
+- Not certified, not reviewed by rescue professionals.
+
+---
+
+## Try it
+
+**Live:** open https://helix-mauve-three.vercel.app.
+- **Dashboard** (`/web/index.html`): fire, flood, collapse. Settings (speed, people, animals, robots, seed) are on the right. Defaults give a good run: *People 3, Animals 1, Robots 2, seed 4*.
+- **Operator console** (`/web/operator.html`): on a laptop it shows the pairing code; open the same page on a phone, type the code, press **DEPLOY**, then say or type *"come out"*.
+- **Well** (`/web/well.html`): child or adult, where they are, shaft width and depth, foul gas on or off.
+- **Robot** (`/web/robot.html`) and **Results** (`/web/results.html`).
+
+**Run locally** (Node 20 or newer, no dependencies):
+```bash
+node local-server.js        # http://localhost:8080
+npm test                    # 72 tests
+npm run eval                # single-unit evaluation  -> eval/RESULTS.md
+npm run eval:fleet          # fleet, well, link-loss  -> docs/EVAL_FLEET.md
+node scripts/torque_check.mjs        # static physics check -> docs/PHYSICS_CHECK.md
+node scripts/make_physics_urdf.mjs   # regenerate the physics URDFs
+```
+
+**Optional AI assistant** (environment variables, never commit a key; details in `docs/AI_SETUP.md`):
+```
+LLM_BASE_URL=https://api.meta.ai/v1   LLM_MODEL=muse-wonder-1.0   LLM_API_KEY=...   # Meta Muse
+# or: https://inference.baseten.co/v1 with meta-models/muse-spark-open-1026 (Baseten)
+```
+Check it at `/api/llm` (shows whether the keys were picked up, never the keys) and `/api/llm?test=1`.
+Optional: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` send a real message when the commander approves the dispatch.
+
+**Deploy:** Vercel (static files plus `api/llm.js`), or `docker compose up`.
+
+---
+
+## How it fits together
+```
+sensors (simulated)  ->  verification (two sensor types)  ->  planner / mission agents
+                                                                   |  proposes an action
+                                                         SAFETY GATE (plain code) + human approval
+                                                                   |  only ALLOW passes
+                                              gated actuator bus -> simulated port  (hardware port: future)
+        every decision -> SHA-256 audit chain          operator console, alarm, field reports
+        optional AI: words only (brief, radio message, speech -> 4 intents), never read by the gate
+```
 
 ## Layout
 ```
-src/util.js        RNG, SHA-256, A*
-src/scenarios.js   fire / water / collapse packs and parameters (placeholders)
-src/gate.js        deterministic safety gate
-src/sim.js         world, sensors, verification, mission agent, approvals, dispatch
-src/audit.js       hash-chained audit log
-src/urdf.js        URDF loader, forward kinematics, model statistics
-src/hal.js         hardware abstraction: gated actuator bus, simulated port, hardware placeholder (docs/HARDWARE_READY.md)
-robot/helix.urdf   the robot, described as code
-web/               dashboard (canvas + panels)
-local-server.js    static server + /api/alert + /api/brief
-eval/run.js        reproducible evaluation
-test/              node:test suite
-data/casualty_profiles.json   100 synthetic profiles
+src/sim.js, scenarios.js, gate.js   world, sensors, verification, mission agents, fleet, safety gate
+src/well.js                         well and borewell rescue (winch, gas, rescue pod)
+src/command.js                      the four voice and text commands
+src/snapshot.js, names.js           what the operator sees; unit names (Atlas, Bolt, Cinder)
+src/llm.js, api/llm.js              optional AI assistant (server side, keys from the environment)
+src/audit.js, hal.js, urdf.js       audit chain, hardware abstraction, URDF loader and kinematics
+web/                                dashboard, operator console, well, robot viewer, results (canvas, no framework)
+web/link.js, host-link.js           laptop and phone link; web/vendor holds PeerJS and a QR library (MIT)
+web/camera.js, fieldreports.js      simulated thermal frames and field reports
+robot/                              helix.urdf and the physics URDFs
+ros2/                               Gazebo Harmonic world and models (prepared, not run)
+eval/, scripts/, test/              evaluations, physics scripts, 72 tests
+docs/                               deck notes, demo script, submission text, hardware readiness, physics check, ROS 2 plan, AI setup
 ```
 
+---
+
 ## Provenance and disclosure
-Written by the team with an AI coding assistant. Open-source dependencies: none at runtime (Node standard library). This project was built **before** the AgentX 24-hour window as a prototype; it must be submitted to any event only if that event's organizers confirm in writing that pre-built work is allowed, and this disclosure stays in the README. Commit timestamps are real and unmodified.
+Built by the team with an AI coding assistant (Claude). There are no runtime dependencies (Node standard library); the browser bundles two small MIT libraries, PeerJS and a QR generator, under `web/vendor`. The optional AI assistant calls a hosted model API (Meta Muse) from a server function.
+
+**What was built when (from the real, unmodified commit history):**
+- **Before the 24-hour window** (commits dated 10 Nov 2026, 13:50 to 13:53 UTC, i.e. before the window opened at 11 Nov 10:00 IST = 04:30 UTC): the core single-casualty engine for fire, flood and collapse, the deterministic safety gate, the hash-chained audit log, the first dashboard, the synthetic casualty profiles and the first evaluation (3 commits).
+- **During the window** (51 commits from 11 Nov 04:34 UTC onwards): the robot design (URDF, 3D viewer, hardware abstraction), multi-casualty rescue and triage, animals, the fleet (pair lift, hand-over, distress calls, link loss), the well scenario and rescue pod, the operator console and the laptop-phone link, voice commands, the AI assistant, field reports and thermal frames, the physics work, the new interface and theme, the deck, and the extended evaluation and tests.
+
+Whether pre-built work is acceptable under the event rules is for the organizers to decide; the facts above are what the repository shows. Commit timestamps are real. Everything in this README describes a simulation unless it says otherwise.
