@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helix Command: operator console</title>
+<link rel="stylesheet" href="/web/style.css">
+<style>
+  body{max-width:560px;margin:0 auto}
+  .op{padding:10px 12px 40px;display:flex;flex-direction:column;gap:10px}
+  .oph{display:flex;align-items:center;gap:10px;justify-content:space-between}
+  .oph h1{font-size:16px;margin:0}
+  .big{width:100%;padding:16px;font-size:17px;font-weight:700;border-radius:12px;border:2px solid #2fbf7a;background:#12533a;color:#eafff3;cursor:pointer}
+  .big.hold{border-color:#ffb454;background:#5a4a12;color:#fff4d8}
+  .big:disabled{opacity:.5;cursor:default}
+  .state{display:flex;gap:8px;flex-wrap:wrap}
+  .state div{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px}
+  .state b{display:block;font-size:15px}
+  .ubar{height:9px;background:#0b1118;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:3px 0 6px}
+  .ubar>div{height:100%}
+  .note{font-size:12px;color:var(--mute);line-height:1.4}
+  details summary{cursor:pointer;color:var(--mute);font-size:12px}
+  .setup{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:12px}
+  .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;background:#1b2a3a;margin-right:4px}
+  canvas{width:100%;border-radius:10px;background:#070b10}
+</style>
+</head>
+<body>
+<div class="op">
+  <div class="oph">
+    <div class="brand"><span class="logo">HX</span><div><h1>Operator console</h1><p class="note" style="margin:0">handheld screen · outside the danger zone</p></div></div>
+    <a class="tab" href="/web/index.html" style="text-decoration:none;color:inherit">Sim view<small>robot's world</small></a>
+  </div>
+  <div class="banner" style="margin:0">SIMULATION ONLY · design concept of the operator's handheld screen</div>
+
+  <button id="btnDeploy" class="big">&#9654; DEPLOY: go in, search and rescue (autonomous)</button>
+  <div class="note">The operator gives one signal: deploy. There is no steering: the units choose their own route from what they sense (heat, breath and air quality, voice, radar) and ask here for approval or help.</div>
+
+  <div id="alarm" class="alarm" style="display:none"></div>
+
+  <div class="state">
+    <div>State<b id="oState">STANDBY</b></div><div>Time<b id="oTime">0s</b></div><div>Rescued<b id="oRescued">0 / 0</b></div><div>Outcome<b id="oOutcome">-</b></div>
+  </div>
+
+  <div class="card"><h2>Units <small>battery and status</small></h2><div id="oUnits"></div></div>
+  <div class="card"><h2>Approvals <small>needs the operator</small></h2><div id="oAppr" class="list"><p class="hint">Nothing waiting.</p></div></div>
+  <div class="card"><h2>Live view <small>what the units have found</small></h2><canvas id="oMap" width="520" height="300"></canvas></div>
+  <div class="card"><h2>What the units sense <small>this drives their decisions</small></h2><div id="oSense" class="mono"></div></div>
+  <div class="card"><h2>People found</h2><div id="oPeople" class="mono"></div></div>
+  <div class="card"><h2>Alarm log</h2><div id="oAlarms" class="list small"><span class="hint">No alarms.</span></div></div>
+  <div class="card"><h2>Latest events</h2><div id="oLog" class="trace" style="max-height:200px"></div></div>
+
+  <div class="row">
+    <button id="btnHold">Hold</button><button id="btnRestart">Reset</button>
+    <label class="chk"><input type="checkbox" id="chkSound" checked> Alarm sound</label><button id="btnSound">Test sound</button>
+  </div>
+  <details><summary>Instructor setup (not part of the operator's job)</summary>
+    <div class="setup">
+      <label>Scenario <select id="inScn"><option value="fire">Fire</option><option value="water">Water</option><option value="collapse">Collapse</option><option value="well">Well</option></select></label>
+      <label>People <select id="inCount"><option>1</option><option>2</option><option>3</option><option selected>4</option></select></label>
+      <label>Robots <select id="inRobots"><option>1</option><option selected>2</option><option>3</option></select></label>
+      <label>Casualty kg <input id="inWeight" type="number" value="75" min="30" max="140" style="width:64px"></label>
+      <label>Seed <input id="inSeed" type="number" value="4" style="width:64px"></label>
+      <label>Speed <select id="inSpeed"><option value="1">1x</option><option value="2" selected>2x</option><option value="5">5x</option><option value="12">12x</option></select></label>
+      <label class="chk"><input type="checkbox" id="chkAuto" checked> Auto-approve (demo). Untick to approve by hand</label>
+    </div>
+  </details>
+</div>
+<script type="module" src="/web/operator.js"></script>
+</body>
+</html>

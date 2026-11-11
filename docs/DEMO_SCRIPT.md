@@ -2,6 +2,8 @@
 
 Record the live dashboard (browser, full screen). Voice-over in English. Windows: Win+G (Xbox Game Bar) or OBS. Upload to YouTube as *unlisted* and paste the link in the form.
 
+Operator-screen version (recommended for the video): open `/web/operator.html` on a phone-sized window, press **DEPLOY**, and narrate that the operator only gives that one signal while the units search, decide and call for help by themselves; show the battery, the sensor readings and the alarm beep. For a distress call use Fire, People 3, Robots 1, kg 105, seed 7 (Instructor setup).
+
 Before recording: open the app, untick **Commander auto-approves**, set speed to 2x, leave **Show ground truth** off.
 
 > Multi-casualty demo: leave **People = 4**, **Robots = 2** and the default seeds (fire 4, water 5, collapse 4). Heavy-casualty demo: Fire, People 3, Robots 2, Casualty kg 105, seed 7 (units lift together); set Robots to 1 and the same run shows the distress call. Older single-unit settings: People 3 / Robots 1 with seeds fire 60, water 19, collapse 4. The unit rescues all three one after another, most critical first, then stops when the area is clear. The timed script below shows one casualty, so set **People = 1** for it (fire seed 10, water seed 1).
