@@ -52,9 +52,11 @@ export class Simulation {
     if (opts.noInjection) sc.reports = sc.reports.filter((r) => r.source !== 'unverified_text');
     const startBattery = sc.params.startBattery ?? clamp(100 - sc.params.patrolDrain * sc.params.patrolSeconds, 2, 100);
     this.robot = { x: sc.robotStart.x, y: sc.robotStart.y, battery: startBattery, carrying: null, flotationDeployed: false,
-      blankets: 1, progress: 0, busy: 0, busyAction: null, onDone: null, trail: [] };
+      blankets: Math.max(1, sc.casualties.length), progress: 0, busy: 0, busyAction: null, onDone: null, trail: [] };
     this.startBattery = startBattery;
-    this.casualties = sc.casualties.map((c) => ({ health: 100, alive: true, covered: false, aboard: false, delivered: false, lost: false,
+    this.multi = sc.casualties.length > 1;
+    this.sweeps = 0;
+    this.casualties = sc.casualties.map((c) => ({ health: c.healthStart ?? 100, alive: true, covered: false, aboard: false, delivered: false, lost: false,
       fx: c.x, fy: c.y, ...c }));
     this.decoys = sc.decoys.map((d) => ({ ...d }));
     this.candidates = [];
@@ -153,6 +155,9 @@ export class Simulation {
         return 4 + w / 12 + this.risk[this.idx(x, y)] * 40;
       }
       if (this.moveViolation(x, y, loaded)) return Infinity;
+      if (this.multi && loaded && this.scenario === 'fire' && this.gateOn) { // carrying: keep a margin from the fire front, which keeps growing
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const nx = x + dx, ny = y + dy; if (this.inB(nx, ny) && this.fireI[this.idx(nx, ny)] > 0.3) return Infinity; }
+      }
       let c = 1;
       if (this.scenario === 'fire') {
         c += Math.max(0, this.tempAt(x, y) - 40) / 45;
@@ -181,7 +186,7 @@ export class Simulation {
     a.status = 'approved'; a.at = this.t;
     this.approvals.add(a.kind + ':' + a.ref);
     this.emit('Commander', 'approval', `${a.role} APPROVED: ${a.kind} (${a.ref})`, { kind: a.kind });
-    if (a.kind === 'dispatch') this.sendAlert();
+    if (a.kind === 'dispatch') this.sendAlert(a.ref);
     return true;
   }
   reject(id) {
@@ -203,14 +208,45 @@ export class Simulation {
       }
     }
   }
-  sendAlert() {
-    const msg = `Helix Command: casualty ${this.mission.casualty?.id ?? ''} delivered to safe zone at t=${this.t}s (${this.sc.label}). Handoff report attached.`;
+  sendAlert(ref) {
+    const msg = `Helix Command: casualty ${ref && ref !== 'incident' ? ref : (this.mission.casualty?.id ?? '')} delivered to safe zone at t=${this.t}s (${this.sc.label}). Handoff report attached.`;
     this.alerts.push({ t: this.t, msg });
     this.emit('Dispatch', 'action', `ALERT SENT to medical and fire teams: ${msg}`);
     if (this.opts.onAlert) this.opts.onAlert(msg, this);
   }
+  // Multi-casualty rescue: one casualty that cannot be moved safely is referred to the human team and the unit
+  // carries on with the others. Global problems (battery exhausted, nothing left to find) still end the mission.
+  skipCasualty(c, reason) {
+    this.humanTeamRequested = true;
+    this.runGate({ type: 'escalate_humans' });
+    c.referred = true;
+    this.emit('Dispatch', 'warn', `HUMAN TEAM REQUESTED for ${c.id}: ${reason}. Unit moves on to the next casualty.`);
+    this.refusals.push({ t: this.t, reason: `${c.id}: ${reason}` });
+    this.resetMission();
+    if (this.robot.carrying === c) { c.aboard = false; this.robot.carrying = null; }
+    this.checkAllDone();
+  }
+
+  resetMission() {
+    Object.assign(this.mission, { path: [], target: null, casualty: null, candidate: null, energyNeeded: undefined, harvest: null, noPath: 0, harvestAttempts: 0, harvestReplans: 0 });
+    this.setState('SEARCH');
+  }
+
+  remaining() { return this.casualties.filter((c) => c.alive && !c.delivered && !c.lost && !c.referred); }
+
+  checkAllDone() {
+    if (!this.multi || this.outcome || this.remaining().length) return;
+    const n = this.casualties.filter((c) => c.delivered).length;
+    const ref = this.casualties.filter((c) => c.referred).length, gone = this.casualties.length - n - ref;
+    this.setState('DONE');
+    this.finish(n === this.casualties.length ? 'delivered' : n ? 'escalated_partial' : 'escalated', `Area clear: ${n} of ${this.casualties.length} casualties delivered to a safe zone${ref ? `, ${ref} referred to the human team` : ''}${gone ? `, ${gone} did not survive` : ''}`);
+  }
+
   escalate(reason, result = 'escalated') {
     if (this.outcome) return;
+    const cur = this.mission.casualty;
+    if (this.multi && cur && result === 'escalated' && cur.alive && !cur.delivered && !cur.lost && !cur.referred) { this.skipCasualty(cur, reason); return; }
+    if (this.multi && cur && result === 'escalated_timeout' && cur.alive && !cur.delivered && !cur.lost && !cur.referred) { this.skipCasualty(cur, reason); return; }
     this.humanTeamRequested = true;
     this.mission.state = 'HOLD_ESCALATED'; this.mission.path = [];
     this.runGate({ type: 'escalate_humans' });
@@ -360,11 +396,11 @@ export class Simulation {
           if (c.clinging) { c.clinging = false; this.emit('System', 'warn', 'Casualty lost their grip on the debris and is drifting downstream'); }
           c.fy += this.params.driftFactor * this.currentMagAt(cx, cy);
           c.y = Math.round(c.fy);
-          if (this.typeAt(Math.round(c.fx), Math.round(c.fy)) === T.WEIR) { c.lost = true; this.emit('System', 'crit', 'Casualty swept over the weir: lost'); this.finish('casualty_lost', 'Casualty swept over the weir'); }
+          if (this.typeAt(Math.round(c.fx), Math.round(c.fy)) === T.WEIR) { c.lost = true; this.emit('System', 'crit', `Casualty ${c.id} swept over the weir: lost`); if (this.multi) this.casualtyGone(c); else this.finish('casualty_lost', 'Casualty swept over the weir'); }
         }
       } else dmg = c.aboard ? 0.02 : 0.05 + this.collapseRisk * 0.1;
       c.health -= dmg;
-      if (c.health <= 0 && c.alive) { c.alive = false; this.emit('System', 'crit', `Casualty ${c.id} died (simulated exposure)`); this.finish('casualty_died', 'Casualty did not survive'); }
+      if (c.health <= 0 && c.alive) { c.alive = false; this.emit('System', 'crit', `Casualty ${c.id} died (simulated exposure)`); if (this.multi) this.casualtyGone(c); else this.finish('casualty_died', 'Casualty did not survive'); }
     }
     // invariants (counted only if something slipped past the gate, which is the point of the "gate OFF" comparison)
     const r = this.robot;
@@ -375,6 +411,11 @@ export class Simulation {
       if (c.unclothed && !c.covered) this.violations.uncoveredCarried++;
       if (c.weightKg > this.params.maxSoloCasualtyKg) this.violations.overCapacityCarried++;
     }
+  }
+
+  casualtyGone(c) {
+    if (this.mission.casualty === c) { if (this.robot.carrying === c) this.robot.carrying = null; this.resetMission(); }
+    this.checkAllDone();
   }
 
   finish(result, reason) {
@@ -461,7 +502,18 @@ export class Simulation {
     }
   }
 
-  verifiedCandidate() { return this.candidates.find((c) => c.status === 'verified' && !c.handled); }
+  casualtyFor(cand) {
+    return this.casualties.filter((x) => x.alive && !x.delivered && !x.lost && !x.referred).sort((a, b) => dist({ x: a.fx, y: a.fy }, cand) - dist({ x: b.fx, y: b.fy }, cand))[0];
+  }
+
+  // Triage: among verified casualties not yet handled, take the most critical first (least time left before the hazard wins).
+  verifiedCandidate() {
+    const list = this.candidates.filter((c) => c.status === 'verified' && !c.handled);
+    if (!this.multi || list.length < 2) return list[0];
+    const scored = list.map((cand) => { const k = this.casualtyFor(cand); return { cand, k, tt: k ? this.timeToHazard(k) : Infinity }; }).sort((a, b) => a.tt - b.tt);
+    if (scored[0].k) this.emit('Mission', 'info', `Triage: ${scored.map((s) => `${s.k?.id} (${Number.isFinite(s.tt) ? s.tt.toFixed(0) + 's' : 'stable'})`).join(', ')}: most critical first`);
+    return scored[0].cand;
+  }
 
   doSearch() {
     const m = this.mission, r = this.robot;
@@ -481,7 +533,17 @@ export class Simulation {
         if (pl && (!best || pl.cost < best.pl.cost || w.hint)) { best = { w, pl }; if (w.hint) break; }
         if (!pl) w.done = w.hint ? true : w.done;
       }
+      if (!best && this.multi && this.sweeps < 1) { this.sweeps++; for (const w of this.waypoints) w.done = false; this.emit('Mission', 'info', 'First pass finished: running a confirmation sweep before declaring the area clear'); return; }
       if (!best) {
+        if (this.multi && !this.remaining().length) { this.checkAllDone(); return; }
+        if (this.multi) {
+          const n = this.casualties.filter((c) => c.delivered).length, left = this.remaining().length;
+          this.humanTeamRequested = true; this.runGate({ type: 'escalate_humans' });
+          this.emit('Dispatch', 'warn', `HUMAN TEAM REQUESTED: search complete. ${n} delivered; ${left} possible casualt${left > 1 ? 'ies' : 'y'} not found or not reachable safely`);
+          this.setState('DONE');
+          this.finish(n ? 'escalated_partial' : 'escalated', `Search complete: ${n} of ${this.casualties.length} delivered; ${left} not found or not reachable safely: human team requested`);
+          return;
+        }
         if (this.candidates.some((c) => c.status === 'pending' && Object.keys(c.hits).length)) this.escalate('A possible survivor was detected but cannot be reached or verified safely (for example a heavy block needing a crane)');
         else this.escalate('Search exhausted without a verified casualty: human search team requested');
         return;
@@ -512,7 +574,7 @@ export class Simulation {
 
   doAssess() {
     const m = this.mission, r = this.robot, p = this.params, c0 = m.candidate;
-    const c = this.casualties.filter((x) => x.alive && !x.delivered && !x.lost).sort((a, b) => dist({ x: a.fx, y: a.fy }, c0) - dist({ x: b.fx, y: b.fy }, c0))[0];
+    const c = this.multi ? this.casualtyFor(c0) : this.casualties.filter((x) => x.alive && !x.delivered && !x.lost).sort((a, b) => dist({ x: a.fx, y: a.fy }, c0) - dist({ x: b.fx, y: b.fy }, c0))[0];
     if (!c) { this.setState('SEARCH'); return; }
     const drift = dist({ x: c.fx, y: c.fy }, c0);
     if (drift > 4 && c.verifiedOnce && drift <= 25) { this.emit('Mission', 'info', `Re-acquired the verified casualty ${drift.toFixed(0)} cells downstream by tracking; re-verifying on approach`); c0.x = Math.round(c.fx); c0.y = Math.round(c.fy); }
@@ -523,6 +585,11 @@ export class Simulation {
     const est = c.weightKg * (1 + this.rng.range(-0.08, 0.08));
     c.estimate = est;
     this.emit('Mission', 'info', `Casualty profile (non-visual body scan): about ${est.toFixed(0)} kg, ${c.age}, ${c.conscious ? 'conscious' : 'unconscious'}${c.unclothed ? ', unclothed' : ''}${c.spinal ? ', spinal injury suspected' : ''}`);
+    if (this.multi && this.scenario === 'fire' && this.gateOn) {
+      const fx = Math.round(c.fx), fy = Math.round(c.fy); let near = this.tempAt(fx, fy) > p.carryTempLimit * 0.6;
+      for (let dy = -3; dy <= 3 && !near; dy++) for (let dx = -3; dx <= 3; dx++) { const nx = fx + dx, ny = fy + dy; if (this.inB(nx, ny) && this.fireI[this.idx(nx, ny)] > 0.3) { near = true; break; } }
+      if (near) { c0.handled = true; this.escalate(`Casualty ${c.id} is too close to the fire front for the unit to enter and leave safely: fire crew requested`); return; }
+    }
     const toC = this.plan({ x: r.x, y: r.y }, [{ x: Math.round(c.fx), y: Math.round(c.fy) }], { allowDebris: this.scenario === 'collapse' });
     if (!toC) { this.escalate('No safe route to the casualty (blocked by heat, current or heavy debris)'); return; }
     const safeGoals = []; for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) if (this.isSafeZone(x, y) && this.passable(x, y)) safeGoals.push({ x, y });
@@ -569,6 +636,7 @@ export class Simulation {
     for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) {
       if (!this.passable(x, y) || this.isSafeZone(x, y)) continue;
       if (dist({ x, y }, c) <= p.harvestSafeDistance + 2) continue;
+      if (this.multi && this.candidates.some((k) => k.status !== 'rejected' && !k.handled && dist({ x, y }, k) <= p.harvestSafeDistance + 3)) continue; // also keep clear of other known casualties
       if (this.scenario === 'water' && Math.abs(x - c.fx) <= p.harvestSafeDistance + 2 && y > c.fy - (p.harvestSafeDistance + 2)) continue; // keep clear of the casualty's drift path
       let rate = 0;
       if (this.scenario === 'water') { const cur = this.currentMagAt(x, y); if (cur < p.harvestMinCurrent * 1.4 || cur > p.currentLimit * 0.8 || this.depthAt(x, y) > p.depthLimit) continue; rate = p.harvestWaterRate * cur * cur; }
@@ -687,9 +755,17 @@ export class Simulation {
       if (g.decision === 'ALLOW') {
         c.aboard = false; r.carrying = null; c.delivered = true;
         this.emit('Operator', 'ok', `Casualty ${c.id} handed off inside the safe zone at (${r.x},${r.y}). Remaining battery ${r.battery.toFixed(1)}%`);
-        this.finish('delivered', `Casualty ${c.id} delivered to a safe zone`);
-        this.requestApproval('dispatch', 'incident', 'commander', 'Alert medical and fire teams with the handoff report');
-        this.setState('DONE');
+        if (this.multi) {
+          this.requestApproval('dispatch', c.id, 'commander', `Alert medical and fire teams: ${c.id} handed off`);
+          this.resetMission();
+          const left = this.remaining().length;
+          this.emit('Mission', 'ok', left ? `${this.casualties.filter((x) => x.delivered).length} delivered so far. Going back out to search for the next casualty.` : 'No casualties left to rescue.');
+          this.checkAllDone();
+        } else {
+          this.finish('delivered', `Casualty ${c.id} delivered to a safe zone`);
+          this.requestApproval('dispatch', 'incident', 'commander', 'Alert medical and fire teams with the handoff report');
+          this.setState('DONE');
+        }
       }
       return;
     }
@@ -699,6 +775,11 @@ export class Simulation {
       if (!pl) {
         m.noPath = (m.noPath ?? 0) + 1;
         if (m.noPath === 1) this.emit('Mission', 'warn', 'No safe carry route right now: holding and re-planning');
+        if (this.multi && this.tempAt(r.x, r.y) > this.params.carryTempLimit * 0.8) { // do not wait inside the heat: retreat to the coolest reachable spot
+          const cool = []; for (let dy = -8; dy <= 8; dy++) for (let dx = -8; dx <= 8; dx++) { const gx = r.x + dx, gy = r.y + dy; if (this.inB(gx, gy) && this.passable(gx, gy) && this.tempAt(gx, gy) < this.params.carryTempLimit * 0.55) cool.push({ x: gx, y: gy }); }
+          const rp = cool.length ? this.plan({ x: r.x, y: r.y }, cool, { loaded: true }) : null;
+          if (rp) { m.path = rp.path.slice(1); this.follow(); return; }
+        }
         if (m.noPath > 25) this.escalate('No safe carry route to a safe zone: human team requested while the unit holds the casualty in the safest spot');
         return;
       }
@@ -741,6 +822,7 @@ export class Simulation {
       weightKg: c.weightKg, age: c.age, unclothed: c.unclothed, covered: c.covered, spinal: c.spinal, health: +c.health.toFixed(1),
       gateStats: this.gateStats, harvestUsed: this.harvestUsed, humanApprovals: [...this.approvals], injection: this.injection, violations: { ...this.violations }, humanTeamRequested: this.humanTeamRequested,
       auditOk: this.audit.verify().ok,
+      casualtyCount: this.casualties.length, delivered: this.casualties.filter((x) => x.delivered).length, referred: this.casualties.filter((x) => x.referred).length, died: this.casualties.filter((x) => !x.alive || x.lost).length,
     };
   }
 }

@@ -4,6 +4,8 @@ Record the live dashboard (browser, full screen). Voice-over in English. Windows
 
 Before recording: open the app, untick **Commander auto-approves**, set speed to 2x, leave **Show ground truth** off.
 
+> Multi-casualty demo: leave **People = 3** and use the default seeds (fire 4, water 19, collapse 4). The unit rescues all three one after another, most critical first, then stops when the area is clear. The timed script below shows one casualty, so set **People = 1** for it (fire seed 10, water seed 1).
+
 | Time | On screen | Say |
 | --- | --- | --- |
 | 0:00-0:15 | Dashboard, Fire tab | "When people are trapped in a fire, a flood or a collapse, rescuers cannot always go in. Helix Command is the decision layer for a rescue robot. It is a simulation: nothing here controls a real machine." |

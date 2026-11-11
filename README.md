@@ -35,6 +35,9 @@ Optional environment variables: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` send a
 | Water | Full | The unit has patrolled 2 hours (battery about 12%); it harvests from flowing water at a safe spot, then tows the casualty (flotation, head above water) to shore before they drift to a weir |
 | Collapse | Working | Rubble grid; the unit listens, clears blocks within its lifting limit under a stability gate, and flags heavy blocks for a crane |
 
+### Multi-casualty rescue (People: 1 to 4)
+With People set to 2 to 4, the unit does not stop after one rescue. It delivers a casualty to a safe zone, goes back out, and keeps going until the area is clear. When several casualties are known it does **triage**: the one with the least time left before the hazard wins goes first. A casualty it cannot move safely (over 90 kg, too close to the fire front, battery that cannot be recovered in time) is referred to the human team and the unit continues with the others. The unit never knows how many people there are: it finishes with a confirmation sweep and reports how many were delivered, referred or lost. Each lift and each handoff alert still needs human approval, and the evaluation numbers below are for the single-casualty runs (People = 1). Over seeds 1 to 30 with 3 casualties the gate kept safety violations at 0 in all three scenarios (`test/multi.test.js` checks 12 seeds each), but not every casualty can be saved: the unit refuses unsafe lifts by design.
+
 ### The agents
 - **Mission:** plans (A* over a hazard-aware cost map), re-plans, decides when to harvest, refuse or escalate.
 - **Operator:** executes moves and lifts in the simulation, only through the gate.

@@ -20,6 +20,7 @@
     <div class="statusbar">
       <div><span class="k">State</span><b id="stState">-</b></div>
       <div><span class="k">Time</span><b id="stTime">0s</b></div>
+      <div><span class="k">Rescued</span><b id="stRescued">-</b></div>
       <div><span class="k">Outcome</span><b id="stOutcome" class="badge">running</b></div>
     </div>
     <div class="canvaswrap"><canvas id="map" width="880" height="484"></canvas><div class="legend" id="legend"></div></div>
@@ -27,6 +28,7 @@
       <button id="btnPlay">Pause</button>
       <button id="btnStep">Step</button>
       <label>Speed <select id="selSpeed"><option value="1">1x</option><option value="2" selected>2x</option><option value="5">5x</option><option value="12">12x</option></select></label>
+      <label>People <select id="inCount"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option></select></label>
       <label>Seed <input id="inSeed" type="number" value="3" min="1" max="9999"></label>
       <label>Casualty kg <input id="inWeight" type="range" min="45" max="105" value="75"><output id="outWeight">75</output></label>
       <button id="btnRestart" class="primary">Restart</button>
