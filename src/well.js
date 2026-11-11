@@ -15,10 +15,12 @@ export const WELL_PARAMS = {
   o2Low: 19.5,
   batteryReserve: 8,
   approvalTimeout: 25,
+  descentRatedKg: 200,    // rated load of the dual-rope descent mode (unit + casualty)
+  robotKg: 80, descentSpeed: 0.3, swimLimitM: 2.5, minWidthM: 0.9, // the unit is about 0.6 m across the shoulders: needs a shaft of at least 0.9 m
   wellX: 18, safeX: 3,    // positions along the ground, in cells
 };
 
-const ACTIONS = ['commit', 'walk', 'measure', 'ventilate', 'anchor', 'lower', 'secure', 'hoist', 'unload', 'cover', 'carry', 'handoff', 'dispatch', 'escalate_humans', 'hold'];
+const ACTIONS = ['commit', 'descend', 'grab', 'walk', 'measure', 'ventilate', 'anchor', 'lower', 'secure', 'hoist', 'unload', 'cover', 'carry', 'handoff', 'dispatch', 'escalate_humans', 'hold'];
 
 export class WellSimulation {
   constructor(opts = {}) {
@@ -32,23 +34,25 @@ export class WellSimulation {
     this.events = []; this.gateLog = []; this.gateStats = { allowed: 0, blocked: 0, approvals: 0 };
     this.approvals = new Set(); this.pending = []; this.alerts = [];
     this.injection = { attempts: 0, blocked: 0 };
-    this.violations = { gasIgnition: 0, overspeedHoist: 0, overload: 0, ropeOverrun: 0, noApproval: 0 };
+    this.violations = { gasIgnition: 0, overspeedHoist: 0, overload: 0, ropeOverrun: 0, noApproval: 0, stuckInShaft: 0 };
     this.outcome = null; this.humanTeamRequested = false; this.refusals = [];
     const D = clamp(opts.depthM ?? 14, 4, 60);
     const where = opts.where ?? this.rng.pick(['ledge', 'water', 'water', 'bottom']);
     const waterAt = +(D * 0.62).toFixed(1);
     const posM = where === 'ledge' ? +(D * 0.45).toFixed(1) : where === 'water' ? +(waterAt + 0.4).toFixed(1) : +(D - 0.4).toFixed(1);
     const weight = Math.round(opts.casualtyWeight ?? this.rng.range(50, 90));
-    this.well = { depthM: D, waterAtM: waterAt, widthM: 1.4 };
+    this.well = { depthM: D, waterAtM: waterAt, widthM: opts.widthM ?? 1.4 };
+    const who = opts.who ?? 'random';
+    const age = who === 'child' ? 'child' : who === 'adult' ? 'adult' : who === 'unconscious' ? 'adult' : this.rng.pick(['adult', 'adult', 'elderly', 'child']);
     this.casualty = {
-      id: 'C1', posM, where, weightKg: weight, age: this.rng.pick(['adult', 'adult', 'elderly', 'child']),
-      conscious: this.rng.chance(0.65), unclothed: this.rng.chance(0.2), spinal: opts.spinal ?? this.rng.chance(0.2),
+      id: 'C1', posM, where, weightKg: age === 'child' && who !== 'random' ? Math.round(this.rng.range(18, 40)) : age === 'child' ? Math.min(weight, Math.round(this.rng.range(18, 40))) : weight, age,
+      conscious: who === 'unconscious' ? false : who === 'child' || who === 'adult' ? true : this.rng.chance(0.65), unclothed: this.rng.chance(0.2), spinal: opts.spinal ?? this.rng.chance(0.2),
       health: Math.round(this.rng.range(65, 100)), alive: true, secured: false, aboard: false, delivered: false, covered: false,
     };
     this.gas = opts.gas ? { lel: 35, o2: 17.0 } : { lel: 0, o2: 20.9 };
-    this.robot = { x: 0, battery: opts.startBattery ?? 85, carrying: null, anchored: false, busy: 0, busyAction: null, onDone: null, ropeOutM: 0, load: 0, fan: false };
+    this.robot = { x: 0, battery: opts.startBattery ?? 85, carrying: null, anchored: false, busy: 0, busyAction: null, onDone: null, ropeOutM: 0, load: 0, fan: false, inShaft: false };
     this.startBattery = this.robot.battery;
-    this.mission = { state: 'WALK', note: '', energyNeeded: null, hits: {}, verified: false, secureTries: 0 };
+    this.mission = { state: 'WALK', note: '', energyNeeded: null, hits: {}, verified: false, secureTries: 0, mode: null };
     this.sc = { label: 'Well rescue' };
     this.emit('System', 'info', `Scenario "Well rescue" started (seed ${opts.seed ?? 1}, gate ${this.gateOn ? 'ON' : 'OFF'}). Simulation only; the winch, sling and securing step are design assumptions, not built hardware.`);
   }
@@ -69,16 +73,21 @@ export class WellSimulation {
     switch (a.type) {
       case 'commit': {
         if (this.well.depthM > p.ropeRatingM) return BLOCK('R2_depth', `shaft is ${this.well.depthM.toFixed(0)} m deep, rope rated for ${p.ropeRatingM} m: rope rescue team required`);
-        if (a.weightKg + p.slingKg > p.winchRatedKg) return BLOCK('R3_load', `${a.weightKg.toFixed(0)} kg + sling exceeds the ${p.winchRatedKg} kg winch rating`);
+        if (a.mode === 'descent') {
+          if (this.well.widthM < p.minWidthM) return BLOCK('R11_width', `shaft is only ${(this.well.widthM * 100).toFixed(0)} cm wide: the unit (about 60 cm across) cannot enter. Rope rescue or excavation team required`);
+          const sub = Math.max(0, c.posM - this.well.waterAtM);
+          if (sub > p.swimLimitM) return BLOCK('R8_depth', `casualty is ${sub.toFixed(1)} m under the surface, beyond the unit's ${p.swimLimitM} m swim limit: divers required`);
+          if (p.robotKg + a.weightKg > p.descentRatedKg) return BLOCK('R3_load', `unit + casualty ${(p.robotKg + a.weightKg).toFixed(0)} kg exceeds the ${p.descentRatedKg} kg descent rating`);
+        } else if (a.weightKg + p.slingKg > p.winchRatedKg) return BLOCK('R3_load', `${a.weightKg.toFixed(0)} kg + sling exceeds the ${p.winchRatedKg} kg winch rating`);
         if (a.energy + p.batteryReserve > this.robot.battery) return BLOCK('R8_battery', `needs ${a.energy.toFixed(1)}% + ${p.batteryReserve}% reserve, battery ${this.robot.battery.toFixed(1)}%`);
         return ALLOW;
       }
-      case 'lower': case 'hoist': {
+      case 'lower': case 'hoist': case 'descend': {
         if (this.gas.lel > p.lelLimit) return BLOCK('R4_gas', `methane ${this.gas.lel.toFixed(0)}% of LEL: the winch motor is not explosion-proof, ventilate first`);
         if (!this.robot.anchored) return BLOCK('R5_anchor', 'winch must be anchored at the rim before any rope movement');
         if (a.type === 'hoist' && a.speed > p.maxHoistSpeed) return BLOCK('R6_speed', `hoist speed ${a.speed} m/s above ${p.maxHoistSpeed} m/s: casualty would swing or be jolted`);
-        if (a.type === 'hoist' && a.load > p.winchRatedKg) return BLOCK('R3_load', `rope load ${a.load.toFixed(0)} kg above ${p.winchRatedKg} kg`);
-        if (a.type === 'lower') {
+        if (a.type === 'hoist' && a.load > (this.mission.mode === 'descent' ? p.descentRatedKg : p.winchRatedKg)) return BLOCK('R3_load', `rope load ${a.load.toFixed(0)} kg above the rating`);
+        if (a.type === 'lower' || a.type === 'descend') {
           if (c.spinal && !this.approvals.has('medic:C1')) return NEED('R7_spinal', 'spinal injury suspected: medic approval required before lifting', 'medic');
           if (!this.approvals.has('lift:C1')) return NEED('R9_approval', 'lowering the sling and lifting a casualty requires commander approval', 'commander');
         }
@@ -176,12 +185,13 @@ export class WellSimulation {
   // Counted only if something slipped past the gate (the "gate OFF" comparison).
   invariants() {
     const r = this.robot, p = this.params, s = this.mission.state;
-    const winch = s === 'LOWER' || s === 'HOIST';
+    const winch = s === 'LOWER' || s === 'HOIST' || s === 'DESCEND';
+    if (s === 'DESCEND' && this.well.widthM < p.minWidthM) this.violations.stuckInShaft++;
     if (winch && this.gas.lel > p.lelLimit) this.violations.gasIgnition++;
     if (s === 'HOIST' && this.hoistSpeedNow > p.maxHoistSpeed) this.violations.overspeedHoist++;
-    if (s === 'HOIST' && r.load > p.winchRatedKg) this.violations.overload++;
+    if (s === 'HOIST' && r.load > (this.mission.mode === 'descent' ? p.descentRatedKg : p.winchRatedKg)) this.violations.overload++;
     if (winch && r.ropeOutM > p.ropeRatingM) this.violations.ropeOverrun++;
-    if (s === 'LOWER' && !this.approvals.has('lift:C1')) this.violations.noApproval++;
+    if ((s === 'LOWER' || s === 'DESCEND') && !this.approvals.has('lift:C1')) this.violations.noApproval++;
   }
 
   missionStep() {
@@ -194,6 +204,8 @@ export class WellSimulation {
       case 'ANCHOR': return this.doAnchor();
       case 'LOWER': return this.doLower();
       case 'SECURE': return this.doSecure();
+      case 'DESCEND': return this.doDescend();
+      case 'GRAB': return this.doGrab();
       case 'HOIST': return this.doHoist();
       case 'CARRY': return this.doCarry();
       default: return;
@@ -238,14 +250,16 @@ export class WellSimulation {
     this.emit('Mission', 'info', `Casualty profile (non-visual scan): about ${est.toFixed(0)} kg, ${c.age}, ${c.conscious ? 'conscious' : 'unconscious'}${c.unclothed ? ', unclothed' : ''}${c.spinal ? ', spinal injury suspected' : ''}`);
     const energy = 0.8 + (w.depthM / p.hoistSpeed) * (0.01 + 0.00012 * (est + p.slingKg)) + (w.depthM / p.lowerSpeed) * 0.01 + 1.5;
     m.energyNeeded = energy;
-    const g = this.runGate({ type: 'commit', weightKg: est, energy });
+    m.mode = c.conscious && c.age === 'adult' ? 'sling' : 'descent';
+    if (m.mode === 'descent') this.emit('Mission', 'info', `${c.age === 'child' ? 'A child' : 'This casualty'} ${c.conscious ? 'cannot be expected to hold a rope' : 'is unconscious and cannot hold a rope'}: a sling is not enough. The unit itself will go down the shaft on the tether (dual rope), swim to the casualty, hold them in its arms and be hoisted up with them.`);
+    const g = this.runGate({ type: 'commit', weightKg: est, energy: m.mode === 'descent' ? energy + 1.5 : energy, mode: m.mode });
     if (g.decision === 'BLOCK') {
       this.emit('Gate', 'block', `${g.rule}: ${g.reason}`);
-      this.escalate(g.rule === 'R2_depth' ? `Shaft deeper than the ${p.ropeRatingM} m rope rating: rope rescue team requested` : g.rule === 'R3_load' ? 'Casualty too heavy for the winch rating: rope rescue team requested' : 'Battery too low for the extraction: human team requested');
+      this.escalate(g.rule === 'R11_width' ? 'Shaft too narrow for the unit to enter (borewell): rope rescue or excavation team requested' : g.rule === 'R8_depth' ? 'Casualty is too deep under water for the unit: divers requested' : g.rule === 'R2_depth' ? `Shaft deeper than the ${p.ropeRatingM} m rope rating: rope rescue team requested` : g.rule === 'R3_load' ? 'Casualty too heavy for the winch rating: rope rescue team requested' : 'Battery too low for the extraction: human team requested');
       return;
     }
-    this.emit('Mission', 'ok', `Plan accepted: needs about ${energy.toFixed(1)}% battery + ${p.batteryReserve}% reserve (have ${r.battery.toFixed(1)}%). The unit stays at the rim and works the winch; it does not go down the shaft.`);
-    this.requestApproval('lift', 'C1', 'commander', `Lower the rescue sling and lift casualty C1 (about ${est.toFixed(0)} kg) from ${c.posM.toFixed(0)} m`);
+    this.emit('Mission', 'ok', `Plan accepted (${m.mode === 'descent' ? 'unit descends on the tether' : 'sling lowered from the rim'}): needs about ${energy.toFixed(1)}% battery + ${p.batteryReserve}% reserve (have ${r.battery.toFixed(1)}%).`);
+    this.requestApproval('lift', 'C1', 'commander', m.mode === 'descent' ? `Send the unit down the shaft on the tether to bring up casualty C1 (${c.age}, about ${est.toFixed(0)} kg) from ${c.posM.toFixed(0)} m` : `Lower the rescue sling and lift casualty C1 (about ${est.toFixed(0)} kg) from ${c.posM.toFixed(0)} m`);
     if (c.spinal) this.requestApproval('medic', 'C1', 'medic', 'Spinal injury suspected for C1: approve lifting');
     this.setState('AWAIT_APPROVAL');
   }
@@ -260,7 +274,7 @@ export class WellSimulation {
   doAnchor() {
     const r = this.robot;
     this.runGate({ type: 'anchor' });
-    this.startAction('anchor', 8, () => { r.anchored = true; this.emit('Operator', 'ok', 'Winch frame anchored at the rim and load-tested; rope paid out over the shaft.'); this.mission.lowered = false; this.setState('LOWER'); });
+    this.startAction('anchor', 8, () => { r.anchored = true; this.emit('Operator', 'ok', 'Winch frame anchored at the rim and load-tested; rope paid out over the shaft.'); this.mission.lowered = false; this.setState(this.mission.mode === 'descent' ? 'DESCEND' : 'LOWER'); });
   }
 
   doLower() {
@@ -289,17 +303,45 @@ export class WellSimulation {
     });
   }
 
+  doDescend() {
+    const r = this.robot, c = this.casualty, p = this.params, m = this.mission;
+    const g = this.runGate({ type: 'descend', speed: p.descentSpeed }, true);
+    if (g.decision !== 'ALLOW') { if (g.decision === 'APPROVAL') this.requestApproval(g.role === 'medic' ? 'medic' : 'lift', 'C1', g.role, g.reason); return; }
+    if (!m.descending) { m.descending = true; r.inShaft = true; this.emit('Operator', 'info', `Unit going down the shaft on the tether at ${p.descentSpeed} m/s (main rope plus safety line), camera and lamp on.`); }
+    r.ropeOutM = Math.min(c.posM, r.ropeOutM + p.descentSpeed); r.load = p.robotKg; r.battery -= 0.012;
+    if (!m.swimNote && r.ropeOutM > this.well.waterAtM) { m.swimNote = true; this.emit('Operator', 'info', 'Entering the water: swim mode, head and sensors kept above the surface.'); }
+    if (r.ropeOutM >= c.posM - 0.01) { this.emit('Operator', 'ok', `Unit at the casualty (${c.posM.toFixed(1)} m).`); this.setState('GRAB'); }
+  }
+
+  doGrab() {
+    const c = this.casualty, m = this.mission, r = this.robot;
+    this.runGate({ type: 'grab' });
+    const pr = c.age === 'child' ? 0.9 : 0.8;
+    this.startAction('grab', 12, () => {
+      m.secureTries++;
+      if (this.rng() < pr) {
+        c.secured = true; c.inArms = true;
+        if (c.unclothed && !c.covered) { c.covered = true; this.emit('Operator', 'ok', 'Casualty wrapped in the thermal blanket (dignity protocol, also reduces heat loss).'); }
+        this.emit('Operator', 'ok', `Casualty held in the cradle carry with the head above the water and a flotation collar on (${c.age === 'child' ? 'small child, held gently' : 'adult'}). Camera confirmed the hold.`);
+        r.load = this.params.robotKg + c.weightKg; this.setState('HOIST');
+      } else if (m.secureTries >= 3) this.escalate('The unit could not get a safe hold on the casualty after 3 tries: divers or rope rescue team requested');
+      else this.emit('Operator', 'warn', `Hold not confirmed by the camera (try ${m.secureTries} of 3): repositioning.`);
+    });
+  }
+
   doHoist() {
     const r = this.robot, c = this.casualty, p = this.params, m = this.mission;
     const speed = this.gateOn ? p.hoistSpeed : 0.6;
     this.hoistSpeedNow = speed;
-    const load = c.weightKg + p.slingKg + (c.where === 'water' && r.ropeOutM > this.well.waterAtM - 1 ? 0.2 * c.weightKg : 0); // water drag while leaving the water
+    const load = (m.mode === 'descent' ? p.robotKg + c.weightKg : c.weightKg + p.slingKg) + (c.where === 'water' && r.ropeOutM > this.well.waterAtM - 1 ? 0.2 * c.weightKg : 0); // water drag while leaving the water
     r.load = load;
     const g = this.runGate({ type: 'hoist', speed, load }, true);
     if (g.decision !== 'ALLOW') { if (!m.holdNote) { m.holdNote = true; this.emit('Gate', 'block', `${g.rule}: ${g.reason}`); } return; }
-    if (!m.hoisting) { m.hoisting = true; this.emit('Operator', 'info', `Hoisting slowly at ${speed} m/s (rope load about ${load.toFixed(0)} kg of ${p.winchRatedKg} kg).`); }
+    if (!m.hoisting) { m.hoisting = true; this.emit('Operator', 'info', `Hoisting slowly at ${speed} m/s (rope load about ${load.toFixed(0)} kg of ${m.mode === 'descent' ? p.descentRatedKg : p.winchRatedKg} kg).`); }
     r.ropeOutM = Math.max(0, r.ropeOutM - speed); c.aboard = true; r.battery -= 0.01 + 0.00012 * load;
-    if (r.ropeOutM <= 0) {
+    if (r.ropeOutM <= 0 && m.mode === 'descent') {
+      this.startAction('step_out', 5, () => { r.inShaft = false; r.carrying = c; r.load = 0; this.hoistSpeedNow = 0; this.emit('Operator', 'ok', 'Unit and casualty are back at the rim. Stepping out with the casualty in its arms.'); this.setState('CARRY'); });
+    } else if (r.ropeOutM <= 0) {
       this.startAction('unload', 6, () => {
         r.carrying = c; r.load = 0; this.hoistSpeedNow = 0; this.emit('Operator', 'ok', 'Casualty at the rim and unloaded from the sling.'); this.setState('CARRY');
       });
@@ -330,7 +372,7 @@ export class WellSimulation {
     const c = this.casualty;
     return {
       scenario: 'well', seed: this.opts.seed ?? 1, gateOn: this.gateOn, outcome: this.outcome?.result ?? 'running', reason: this.outcome?.reason ?? '', t: this.t,
-      depthM: this.well.depthM, where: c.where, weightKg: c.weightKg, health: +c.health.toFixed(1), gas: { ...this.gas },
+      depthM: this.well.depthM, widthM: this.well.widthM, mode: this.mission.mode, age: c.age, where: c.where, weightKg: c.weightKg, health: +c.health.toFixed(1), gas: { ...this.gas },
       battery: +this.robot.battery.toFixed(2), startBattery: this.startBattery, gateStats: this.gateStats, violations: { ...this.violations },
       humanApprovals: [...this.approvals], injection: this.injection, humanTeamRequested: this.humanTeamRequested, auditOk: this.audit.verify().ok,
     };

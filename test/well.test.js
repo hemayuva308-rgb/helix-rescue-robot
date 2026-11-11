@@ -6,7 +6,7 @@ const run = (o) => new WellSimulation({ autoCommander: true, commanderDelay: 4, 
 
 test('well: the unit rescues from shafts within the rope rating, with or without foul gas', () => {
   for (const depthM of [8, 14, 25]) for (const gas of [false, true]) for (let seed = 1; seed <= 8; seed++) {
-    const r = run({ seed, depthM, gas });
+    const r = run({ seed, depthM, gas, who: 'adult' });
     assert.equal(r.outcome, 'delivered', `${depthM} m gas=${gas} seed ${seed}`);
     assert.equal(Object.values(r.violations).reduce((a, b) => a + b, 0), 0);
     assert.equal(r.auditOk, true);
@@ -41,4 +41,26 @@ test('well: injected text never changes what the unit does', () => {
 test('well: over-weight casualty (beyond the winch rating) is refused', () => {
   const r = run({ seed: 2, depthM: 14, gas: false, casualtyWeight: 160 });
   assert.equal(r.outcome, 'escalated');
+});
+
+test('well: a child (cannot hold a rope) is brought up by the unit itself, going down the shaft on the tether', () => {
+  let delivered = 0, descent = 0;
+  for (let seed = 1; seed <= 12; seed++) {
+    const r = run({ seed, who: 'child', depthM: 14, gas: true, where: 'water' });
+    if (r.mode === 'descent') descent++;
+    if (r.outcome === 'delivered') delivered++;
+    assert.equal(Object.values(r.violations).reduce((a, b) => a + b, 0), 0);
+    assert.equal(r.auditOk, true);
+  }
+  assert.equal(descent, 12);
+  assert.ok(delivered >= 9, `delivered ${delivered}/12`);
+});
+
+test('well: a narrow borewell is refused for the unit, and a casualty deeper under water than the swim limit needs divers', () => {
+  const narrow = run({ seed: 1, who: 'child', widthM: 0.3, depthM: 14, gas: false, where: 'water' });
+  assert.equal(narrow.outcome, 'escalated');
+  assert.match(narrow.reason, /narrow|borewell/i);
+  const deep = run({ seed: 1, who: 'child', depthM: 14, gas: false, where: 'bottom' });
+  assert.equal(deep.outcome, 'escalated');
+  assert.match(deep.reason, /divers/i);
 });

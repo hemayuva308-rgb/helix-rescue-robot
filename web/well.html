@@ -28,6 +28,8 @@
     <div class="controls">
       <button id="btnPlay">Pause</button><button id="btnStep">Step</button>
       <label>Speed <select id="selSpeed"><option value="1">1x</option><option value="2" selected>2x</option><option value="5">5x</option><option value="12">12x</option></select></label>
+      <label>Who is in the well <select id="inWho"><option value="child" selected>Child (cannot hold a rope)</option><option value="unconscious">Unconscious adult</option><option value="adult">Conscious adult (can hold a rope)</option><option value="random">Random</option></select></label>
+      <label>Shaft <select id="inWidth"><option value="1.4" selected>Open well, 1.4 m</option><option value="0.3">Narrow borewell, 0.3 m</option></select></label>
       <label>Seed <input id="inSeed" type="number" value="1" min="1" max="9999"></label>
       <label>Well depth <input id="inDepth" type="range" min="5" max="40" value="14"> <b id="outDepth">14</b> m</label>
       <label>Casualty kg <input id="inWeight" type="range" min="40" max="130" value="75"> <b id="outWeight">75</b></label>
