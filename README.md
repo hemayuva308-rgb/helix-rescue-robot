@@ -13,6 +13,9 @@ Simplifications: the fire scenario is a single floor plan with six rooms and two
 
 The long-term vision the decision layer is built for: a human-shaped, human-height (about 5 ft) rescue robot with arms and legs that walks at human pace and carries a casualty of up to about 90 kg in its arms, with sensors in the head and chest. It is a concept illustration, not a CAD model, and not something built or tested yet. What exists today is the decision layer, proven in simulation.
 
+## Physics status
+The 3D viewer is a kinematic preview. A **static physics check** of the design (`docs/PHYSICS_CHECK.md`) says that with the assumed actuators the 90 kg carry does not hold: shoulders need about 140 Nm for 75 kg (limit assumed 120 Nm) and the combined centre of mass lies in front of the feet. Physics-ready URDFs and Gazebo Harmonic files are prepared in `robot/` and `ros2/` but **have not been run yet**.
+
 ## Robot designed as code
 `robot/helix.urdf` describes the rescue robot in URDF, the format ROS and Gazebo read: 20 links, 19 joints (12 actuated), human height (about 1.5 m, 5 ft), about 80 kg (assumed), sensors in the head and chest, a back-mounted battery. Open `/web/robot.html` for a 3D viewer with joint sliders, a carry pose and a walking preview. The preview is a kinematic joint-angle animation for design review; it does not model balance, contact or real walking speed. `src/urdf.js` loads the file and computes forward kinematics, height, mass and centre of mass (7 tests).
 

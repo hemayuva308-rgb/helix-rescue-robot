@@ -44,6 +44,9 @@ The robot itself is described in `robot/helix.urdf` (links, joints, limits, mass
 
 Verdict: **the software architecture is ready to be attached to hardware; a robot is not ready to be built from this yet.**
 
+## Static physics check (new)
+`node scripts/torque_check.mjs` (output in `docs/PHYSICS_CHECK.md`) computes gravity torque on every joint and the centre of mass over the feet, from the URDF masses and sizes. **Finding: with the assumed actuators the 90 kg target does not hold.** Carrying 75 kg in the arms needs about 140 Nm at each shoulder against 120 Nm assumed (166 Nm for 90 kg), and the combined centre of mass ends up in front of the feet, so the robot would tip forward unless it leans back, widens its stance or uses a counterweight. This is a design finding, not a failure of the software, and it is the kind of result the physics step is for. Gazebo files for the next step are in `ros2/` (prepared, not run).
+
 ## Suggested path
 1. ROS 2: publish `robot/helix.urdf` with `robot_state_publisher`, check the joints in RViz2.
 2. Wrap the decision layer as a ROS 2 node: sensor topics in, action requests out through the gate node, then the controller.

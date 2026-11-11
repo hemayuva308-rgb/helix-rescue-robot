@@ -1,0 +1,151 @@
+<?xml version="1.0"?>
+<!-- Helix rescue robot: a human-shaped, human-height (about 1.5 m) design described as code.
+     Units: metres, kilograms, radians. Shapes are simple primitives; masses are design assumptions.
+     Forward = +x, left = +y, up = +z. For pitch joints (axis y), a negative angle swings the limb forward. -->
+<robot name="helix">
+  <material name="shell"><color rgba="0.24 0.40 0.58 1"/></material>
+  <material name="limb"><color rgba="0.55 0.63 0.72 1"/></material>
+  <material name="joint"><color rgba="1.0 0.71 0.33 1"/></material>
+  <material name="sensor"><color rgba="0.21 0.82 0.90 1"/></material>
+  <material name="battery"><color rgba="0.17 0.55 0.40 1"/></material>
+
+  <link name="base_link"><!-- pelvis -->
+    <visual><geometry><box size="0.18 0.30 0.16"/></geometry><material name="shell"/></visual>
+    <collision><geometry><box size="0.18 0.30 0.16"/></geometry></collision>
+    <inertial><mass value="8"/><origin xyz="0 0 0"/><inertia ixx="0.0770667" ixy="0" ixz="0" iyy="0.0386667" iyz="0" izz="0.0816"/></inertial>
+  </link>
+
+  <joint name="waist" type="fixed"><parent link="base_link"/><child link="torso"/><origin xyz="0 0 0.29"/></joint>
+  <link name="torso">
+    <visual><geometry><box size="0.20 0.34 0.42"/></geometry><material name="shell"/></visual>
+    <collision><geometry><box size="0.20 0.34 0.42"/></geometry></collision>
+    <inertial><mass value="22"/><origin xyz="0 0 0"/><inertia ixx="0.535333" ixy="0" ixz="0" iyy="0.396733" iyz="0" izz="0.285267"/></inertial>
+  </link>
+
+  <joint name="chest_radar_mount" type="fixed"><parent link="torso"/><child link="chest_radar"/><origin xyz="0.11 0 0.06"/></joint>
+  <link name="chest_radar">
+    <visual><geometry><box size="0.02 0.14 0.16"/></geometry><material name="sensor"/></visual>
+    <collision><geometry><box size="0.02 0.14 0.16"/></geometry></collision>
+    <inertial><mass value="0.5"/><origin xyz="0 0 0"/><inertia ixx="0.00188333" ixy="0" ixz="0" iyy="0.00108333" iyz="0" izz="0.000833333"/></inertial>
+  </link>
+
+  <joint name="backpack_mount" type="fixed"><parent link="torso"/><child link="backpack"/><origin xyz="-0.14 0 0.02"/></joint>
+  <link name="backpack"><!-- battery pack -->
+    <visual><geometry><box size="0.08 0.24 0.30"/></geometry><material name="battery"/></visual>
+    <collision><geometry><box size="0.08 0.24 0.30"/></geometry></collision>
+    <inertial><mass value="10"/><origin xyz="0 0 0"/><inertia ixx="0.123" ixy="0" ixz="0" iyy="0.0803333" iyz="0" izz="0.0533333"/></inertial>
+  </link>
+
+  <joint name="neck_yaw" type="revolute"><parent link="torso"/><child link="neck"/><origin xyz="0 0 0.24"/><axis xyz="0 0 1"/><limit lower="-1.2" upper="1.2" effort="20" velocity="2"/></joint>
+  <link name="neck">
+    <visual><geometry><cylinder radius="0.035" length="0.06"/></geometry><material name="limb"/></visual>
+    <collision><geometry><cylinder radius="0.035" length="0.06"/></geometry></collision>
+    <inertial><mass value="0.5"/><origin xyz="0 0 0"/><inertia ixx="0.000303125" ixy="0" ixz="0" iyy="0.000303125" iyz="0" izz="0.00030625"/></inertial>
+  </link>
+  <joint name="head_pitch" type="revolute"><parent link="neck"/><child link="head"/><origin xyz="0 0 0.12"/><axis xyz="0 1 0"/><limit lower="-0.6" upper="0.6" effort="20" velocity="2"/></joint>
+  <link name="head">
+    <visual><geometry><sphere radius="0.09"/></geometry><material name="shell"/></visual>
+    <collision><geometry><sphere radius="0.09"/></geometry></collision>
+    <inertial><mass value="4"/><origin xyz="0 0 0"/><inertia ixx="0.01296" ixy="0" ixz="0" iyy="0.01296" iyz="0" izz="0.01296"/></inertial>
+  </link>
+  <joint name="thermal_camera_mount" type="fixed"><parent link="head"/><child link="thermal_camera"/><origin xyz="0.075 0 0.015"/></joint>
+  <link name="thermal_camera">
+    <visual><geometry><box size="0.04 0.10 0.04"/></geometry><material name="joint"/></visual>
+    <collision><geometry><box size="0.04 0.10 0.04"/></geometry></collision>
+    <inertial><mass value="0.3"/><origin xyz="0 0 0"/><inertia ixx="0.00029" ixy="0" ixz="0" iyy="0.00008" iyz="0" izz="0.00029"/></inertial>
+  </link>
+
+  <!-- arms -->
+  <joint name="l_shoulder_pitch" type="revolute"><parent link="torso"/><child link="l_upper_arm"/><origin xyz="0 0.22 0.16"/><axis xyz="0 1 0"/><limit lower="-2.6" upper="1.0" effort="120" velocity="2"/></joint>
+  <link name="l_upper_arm">
+    <visual><origin xyz="0 0 -0.12"/><geometry><cylinder radius="0.04" length="0.24"/></geometry><material name="limb"/></visual>
+    <collision><origin xyz="0 0 -0.12"/><geometry><cylinder radius="0.04" length="0.24"/></geometry></collision>
+    <inertial><mass value="2.5"/><origin xyz="0 0 -0.12"/><inertia ixx="0.013" ixy="0" ixz="0" iyy="0.013" iyz="0" izz="0.002"/></inertial>
+  </link>
+  <joint name="l_elbow_pitch" type="revolute"><parent link="l_upper_arm"/><child link="l_forearm"/><origin xyz="0 0 -0.24"/><axis xyz="0 1 0"/><limit lower="-2.4" upper="0.2" effort="100" velocity="2"/></joint>
+  <link name="l_forearm">
+    <visual><origin xyz="0 0 -0.11"/><geometry><cylinder radius="0.035" length="0.22"/></geometry><material name="limb"/></visual>
+    <collision><origin xyz="0 0 -0.11"/><geometry><cylinder radius="0.035" length="0.22"/></geometry></collision>
+    <inertial><mass value="2"/><origin xyz="0 0 -0.11"/><inertia ixx="0.00867917" ixy="0" ixz="0" iyy="0.00867917" iyz="0" izz="0.001225"/></inertial>
+  </link>
+  <joint name="l_wrist" type="fixed"><parent link="l_forearm"/><child link="l_hand"/><origin xyz="0 0 -0.24"/></joint>
+  <link name="l_hand">
+    <visual><geometry><sphere radius="0.045"/></geometry><material name="joint"/></visual>
+    <collision><geometry><sphere radius="0.045"/></geometry></collision>
+    <inertial><mass value="0.5"/><origin xyz="0 0 0"/><inertia ixx="0.000405" ixy="0" ixz="0" iyy="0.000405" iyz="0" izz="0.000405"/></inertial>
+  </link>
+
+  <joint name="r_shoulder_pitch" type="revolute"><parent link="torso"/><child link="r_upper_arm"/><origin xyz="0 -0.22 0.16"/><axis xyz="0 1 0"/><limit lower="-2.6" upper="1.0" effort="120" velocity="2"/></joint>
+  <link name="r_upper_arm">
+    <visual><origin xyz="0 0 -0.12"/><geometry><cylinder radius="0.04" length="0.24"/></geometry><material name="limb"/></visual>
+    <collision><origin xyz="0 0 -0.12"/><geometry><cylinder radius="0.04" length="0.24"/></geometry></collision>
+    <inertial><mass value="2.5"/><origin xyz="0 0 -0.12"/><inertia ixx="0.013" ixy="0" ixz="0" iyy="0.013" iyz="0" izz="0.002"/></inertial>
+  </link>
+  <joint name="r_elbow_pitch" type="revolute"><parent link="r_upper_arm"/><child link="r_forearm"/><origin xyz="0 0 -0.24"/><axis xyz="0 1 0"/><limit lower="-2.4" upper="0.2" effort="100" velocity="2"/></joint>
+  <link name="r_forearm">
+    <visual><origin xyz="0 0 -0.11"/><geometry><cylinder radius="0.035" length="0.22"/></geometry><material name="limb"/></visual>
+    <collision><origin xyz="0 0 -0.11"/><geometry><cylinder radius="0.035" length="0.22"/></geometry></collision>
+    <inertial><mass value="2"/><origin xyz="0 0 -0.11"/><inertia ixx="0.00867917" ixy="0" ixz="0" iyy="0.00867917" iyz="0" izz="0.001225"/></inertial>
+  </link>
+  <joint name="r_wrist" type="fixed"><parent link="r_forearm"/><child link="r_hand"/><origin xyz="0 0 -0.24"/></joint>
+  <link name="r_hand">
+    <visual><geometry><sphere radius="0.045"/></geometry><material name="joint"/></visual>
+    <collision><geometry><sphere radius="0.045"/></geometry></collision>
+    <inertial><mass value="0.5"/><origin xyz="0 0 0"/><inertia ixx="0.000405" ixy="0" ixz="0" iyy="0.000405" iyz="0" izz="0.000405"/></inertial>
+  </link>
+
+  <!-- legs -->
+  <joint name="l_hip_pitch" type="revolute"><parent link="base_link"/><child link="l_thigh"/><origin xyz="0 0.09 -0.08"/><axis xyz="0 1 0"/><limit lower="-1.6" upper="0.8" effort="250" velocity="3"/></joint>
+  <link name="l_thigh">
+    <visual><origin xyz="0 0 -0.16"/><geometry><cylinder radius="0.06" length="0.32"/></geometry><material name="limb"/></visual>
+    <collision><origin xyz="0 0 -0.16"/><geometry><cylinder radius="0.06" length="0.32"/></geometry></collision>
+    <inertial><mass value="7"/><origin xyz="0 0 -0.16"/><inertia ixx="0.0660333" ixy="0" ixz="0" iyy="0.0660333" iyz="0" izz="0.0126"/></inertial>
+  </link>
+  <joint name="l_knee_pitch" type="revolute"><parent link="l_thigh"/><child link="l_shin"/><origin xyz="0 0 -0.32"/><axis xyz="0 1 0"/><limit lower="0" upper="2.4" effort="250" velocity="3"/></joint>
+  <link name="l_shin">
+    <visual><origin xyz="0 0 -0.16"/><geometry><cylinder radius="0.05" length="0.32"/></geometry><material name="limb"/></visual>
+    <collision><origin xyz="0 0 -0.16"/><geometry><cylinder radius="0.05" length="0.32"/></geometry></collision>
+    <inertial><mass value="4"/><origin xyz="0 0 -0.16"/><inertia ixx="0.0366333" ixy="0" ixz="0" iyy="0.0366333" iyz="0" izz="0.005"/></inertial>
+  </link>
+  <joint name="l_ankle_pitch" type="revolute"><parent link="l_shin"/><child link="l_foot"/><origin xyz="0 0 -0.32"/><axis xyz="0 1 0"/><limit lower="-0.9" upper="0.9" effort="120" velocity="3"/></joint>
+  <link name="l_foot">
+    <visual><origin xyz="0.05 0 -0.025"/><geometry><box size="0.22 0.09 0.05"/></geometry><material name="shell"/></visual>
+    <collision><origin xyz="0.05 0 -0.025"/><geometry><box size="0.22 0.09 0.05"/></geometry></collision>
+    <inertial><mass value="1.5"/><origin xyz="0.05 0 -0.025"/><inertia ixx="0.001325" ixy="0" ixz="0" iyy="0.0063625" iyz="0" izz="0.0070625"/></inertial>
+  </link>
+
+  <joint name="r_hip_pitch" type="revolute"><parent link="base_link"/><child link="r_thigh"/><origin xyz="0 -0.09 -0.08"/><axis xyz="0 1 0"/><limit lower="-1.6" upper="0.8" effort="250" velocity="3"/></joint>
+  <link name="r_thigh">
+    <visual><origin xyz="0 0 -0.16"/><geometry><cylinder radius="0.06" length="0.32"/></geometry><material name="limb"/></visual>
+    <collision><origin xyz="0 0 -0.16"/><geometry><cylinder radius="0.06" length="0.32"/></geometry></collision>
+    <inertial><mass value="7"/><origin xyz="0 0 -0.16"/><inertia ixx="0.0660333" ixy="0" ixz="0" iyy="0.0660333" iyz="0" izz="0.0126"/></inertial>
+  </link>
+  <joint name="r_knee_pitch" type="revolute"><parent link="r_thigh"/><child link="r_shin"/><origin xyz="0 0 -0.32"/><axis xyz="0 1 0"/><limit lower="0" upper="2.4" effort="250" velocity="3"/></joint>
+  <link name="r_shin">
+    <visual><origin xyz="0 0 -0.16"/><geometry><cylinder radius="0.05" length="0.32"/></geometry><material name="limb"/></visual>
+    <collision><origin xyz="0 0 -0.16"/><geometry><cylinder radius="0.05" length="0.32"/></geometry></collision>
+    <inertial><mass value="4"/><origin xyz="0 0 -0.16"/><inertia ixx="0.0366333" ixy="0" ixz="0" iyy="0.0366333" iyz="0" izz="0.005"/></inertial>
+  </link>
+  <joint name="r_ankle_pitch" type="revolute"><parent link="r_shin"/><child link="r_foot"/><origin xyz="0 0 -0.32"/><axis xyz="0 1 0"/><limit lower="-0.9" upper="0.9" effort="120" velocity="3"/></joint>
+  <link name="r_foot">
+    <visual><origin xyz="0.05 0 -0.025"/><geometry><box size="0.22 0.09 0.05"/></geometry><material name="shell"/></visual>
+    <collision><origin xyz="0.05 0 -0.025"/><geometry><box size="0.22 0.09 0.05"/></geometry></collision>
+    <inertial><mass value="1.5"/><origin xyz="0.05 0 -0.025"/><inertia ixx="0.001325" ixy="0" ixz="0" iyy="0.0063625" iyz="0" izz="0.0070625"/></inertial>
+  </link>
+  <!-- Gazebo (gz sim, Harmonic): joint state publisher, one position controller per revolute joint (gains are NOT tuned), foot friction -->
+  <gazebo><plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher"/></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>neck_yaw</joint_name><p_gain>80</p_gain><i_gain>0</i_gain><d_gain>8</d_gain><cmd_max>20</cmd_max><cmd_min>-20</cmd_min></plugin></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>head_pitch</joint_name><p_gain>80</p_gain><i_gain>0</i_gain><d_gain>8</d_gain><cmd_max>20</cmd_max><cmd_min>-20</cmd_min></plugin></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>l_shoulder_pitch</joint_name><p_gain>480</p_gain><i_gain>0</i_gain><d_gain>48</d_gain><cmd_max>120</cmd_max><cmd_min>-120</cmd_min></plugin></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>l_elbow_pitch</joint_name><p_gain>400</p_gain><i_gain>0</i_gain><d_gain>40</d_gain><cmd_max>100</cmd_max><cmd_min>-100</cmd_min></plugin></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>r_shoulder_pitch</joint_name><p_gain>480</p_gain><i_gain>0</i_gain><d_gain>48</d_gain><cmd_max>120</cmd_max><cmd_min>-120</cmd_min></plugin></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>r_elbow_pitch</joint_name><p_gain>400</p_gain><i_gain>0</i_gain><d_gain>40</d_gain><cmd_max>100</cmd_max><cmd_min>-100</cmd_min></plugin></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>l_hip_pitch</joint_name><p_gain>1000</p_gain><i_gain>0</i_gain><d_gain>100</d_gain><cmd_max>250</cmd_max><cmd_min>-250</cmd_min></plugin></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>l_knee_pitch</joint_name><p_gain>1000</p_gain><i_gain>0</i_gain><d_gain>100</d_gain><cmd_max>250</cmd_max><cmd_min>-250</cmd_min></plugin></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>l_ankle_pitch</joint_name><p_gain>480</p_gain><i_gain>0</i_gain><d_gain>48</d_gain><cmd_max>120</cmd_max><cmd_min>-120</cmd_min></plugin></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>r_hip_pitch</joint_name><p_gain>1000</p_gain><i_gain>0</i_gain><d_gain>100</d_gain><cmd_max>250</cmd_max><cmd_min>-250</cmd_min></plugin></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>r_knee_pitch</joint_name><p_gain>1000</p_gain><i_gain>0</i_gain><d_gain>100</d_gain><cmd_max>250</cmd_max><cmd_min>-250</cmd_min></plugin></gazebo>
+  <gazebo><plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController"><joint_name>r_ankle_pitch</joint_name><p_gain>480</p_gain><i_gain>0</i_gain><d_gain>48</d_gain><cmd_max>120</cmd_max><cmd_min>-120</cmd_min></plugin></gazebo>
+  <gazebo reference="l_foot"><mu1>1.0</mu1><mu2>1.0</mu2><kp>100000</kp><kd>100</kd></gazebo>
+  <gazebo reference="r_foot"><mu1>1.0</mu1><mu2>1.0</mu2><kp>100000</kp><kd>100</kd></gazebo>
+</robot>
