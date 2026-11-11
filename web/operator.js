@@ -22,7 +22,7 @@ function make() {
 function restart() {
   sim = make(); sim.params.approvalTimeout = 120; window.sim = sim; // a person with a handheld screen needs more than 25 simulated seconds to answer deployed = false; held = false; alarmSeen = 0; logN = 0; $('oLog').innerHTML = '';
   speed = Number($('inSpeed').value); $('btnDeploy').disabled = false; $('btnDeploy').className = 'big'; $('btnDeploy').innerHTML = scn() === 'well' ? '&#9654; DEPLOY: go to the well, go down, search and rescue (autonomous)' : '&#9654; DEPLOY: go in, search and rescue (autonomous)';
-  $('btnHold').textContent = 'Hold'; render();
+  $('btnHold').textContent = 'Hold'; $('btnLink').textContent = 'Cut link (test)'; render();
 }
 function unitsOf() { return sim.units ?? [{ id: 'A', robot: sim.robot, mission: sim.mission }]; }
 
@@ -56,7 +56,7 @@ function map() {
 function render() {
   const units = unitsOf();
   const total = scn() === 'well' ? 1 : sim.casualties.length, done = scn() === 'well' ? (sim.casualty.delivered ? 1 : 0) : sim.casualties.filter((c) => c.delivered).length;
-  $('oState').textContent = !deployed ? 'STANDBY' : held ? 'ON HOLD' : sim.outcome ? 'FINISHED' : 'ACTIVE';
+  $('oState').textContent = !deployed ? 'STANDBY' : sim.linkUp === false ? 'LINK LOST' : held ? 'ON HOLD' : sim.outcome ? 'FINISHED' : 'ACTIVE';
   $('oTime').textContent = `${sim.t}s`; $('oRescued').textContent = `${done} / ${total}`;
   $('oOutcome').textContent = sim.outcome ? sim.outcome.result.replace('_', ' ') : '-';
   // alarm banner + sound (the alarm lives on the operator's screen)
@@ -67,7 +67,7 @@ function render() {
   // units
   $('oUnits').innerHTML = units.map((u) => {
     const b = Math.max(0, Math.min(100, u.robot.battery)), col = b < 20 ? '#ff6b6b' : b < 40 ? '#ffb454' : '#4cd694';
-    const st = !deployed ? 'standing by' : (WORDS[u.mission.state] ?? u.mission.state.toLowerCase()) + (u.mission.paired ? ` (lifting together with ${u.mission.partner.id})` : '');
+    const st = !deployed ? 'standing by' : sim.linkUp === false && !['CARRY', 'HOIST', 'DONE', 'HOLD_ESCALATED'].includes(u.mission.state) ? 'holding position (no operator link)' : (WORDS[u.mission.state] ?? u.mission.state.toLowerCase()) + (u.mission.paired ? ` (lifting together with ${u.mission.partner.id})` : '');
     const extra = scn() === 'water' ? ` · ${fmt(sim.depthAt(u.robot.x, u.robot.y))} m water` : scn() === 'fire' ? ` · ${fmt(sim.tempAt(u.robot.x, u.robot.y), 0)} °C around it` : '';
     return `<div class="row"><span><b style="color:${UCOL[u.id]}">Unit ${u.id}</b> · ${esc(st)}${extra}</span><span>${fmt(b)}%</span></div><div class="ubar"><div style="width:${b}%;background:${col}"></div></div>`;
   }).join('') + (sim.harvestedTotal ? `<p class="note">Energy gathered from the environment so far: ${fmt(sim.harvestedTotal)}%</p>` : '');
@@ -99,6 +99,7 @@ function frame(ts) {
   render(); requestAnimationFrame(frame);
 }
 $('btnDeploy').onclick = () => { if (deployed) return; deployed = true; sim.emit('Operator', 'info', 'Operator signal: DEPLOY. The units go in autonomously; no manual steering.'); $('btnDeploy').disabled = true; $('btnDeploy').textContent = 'DEPLOYED: units are working on their own'; };
+$('btnLink').onclick = () => { const up = sim.linkUp === false; sim.setLink(up); $('btnLink').textContent = up ? 'Cut link (test)' : 'Restore link'; };
 $('btnHold').onclick = () => { held = !held; $('btnHold').textContent = held ? 'Resume' : 'Hold'; };
 $('btnRestart').onclick = restart; $('btnSound').onclick = () => playAlarm('human');
 for (const id of ['inScn', 'inCount', 'inRobots', 'inWeight', 'inSeed', 'chkAuto']) $(id).onchange = () => { if (id === 'inScn') $('inSeed').value = SEEDS[scn()]; restart(); };

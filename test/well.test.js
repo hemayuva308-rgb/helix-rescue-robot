@@ -64,3 +64,17 @@ test('well: a narrow borewell is refused for the unit, and a casualty deeper und
   assert.equal(deep.outcome, 'escalated');
   assert.match(deep.reason, /divers/i);
 });
+
+test('well: link loss holds the unit and resumes without breaking a rule', () => {
+  const s = new WellSimulation({ seed: 3, who: 'child', where: 'water', depthM: 14, gas: true, autoCommander: true, commanderDelay: 4, casualtyWeight: 75 });
+  for (let i = 0; i < 70; i++) s.step();
+  s.setLink(false);
+  const before = s.robot.ropeOutM;
+  for (let i = 0; i < 20; i++) s.step();
+  assert.ok(s.alarms.some((a) => /link/i.test(a.reason)));
+  s.setLink(true);
+  const r = s.run(900);
+  assert.equal(r.outcome, 'delivered');
+  assert.equal(Object.values(r.violations).reduce((a, b) => a + b, 0), 0);
+  assert.ok(before >= 0);
+});

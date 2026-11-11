@@ -76,3 +76,18 @@ test('distress call: a refused casualty raises a visible alarm naming the help n
   s.run(900);
   assert.ok(s.alarms.some((a) => a.kind === 'human' && /second unit|lifting crew/.test(a.need)));
 });
+
+test('link loss: units hold, a unit carrying keeps going, approvals wait, and everything resumes when the link returns', () => {
+  const s = new Simulation('fire', { seed: 4, autoCommander: true, commanderDelay: 4, casualtyCount: 4, casualtyWeight: 75, robots: 2 });
+  for (let i = 0; i < 60; i++) s.step();
+  s.setLink(false);
+  assert.ok(s.alarms.some((a) => /link/i.test(a.reason)));
+  const before = s.units.map((u) => [u.robot.x, u.robot.y, u.robot.carrying ? 1 : 0]);
+  for (let i = 0; i < 40; i++) s.step();
+  s.units.forEach((u, i) => { if (!before[i][2]) assert.ok(Math.abs(u.robot.x - before[i][0]) + Math.abs(u.robot.y - before[i][1]) <= 3, `unit ${u.id} should hold still`); });
+  assert.equal(s.pending.filter((a) => a.status === 'timed_out').length, 0, 'approvals do not time out while nobody can answer');
+  s.setLink(true);
+  const r = s.run(900);
+  assert.equal(Object.values(r.violations).reduce((a, b) => a + b, 0), 0);
+  assert.ok(r.delivered >= 3);
+});

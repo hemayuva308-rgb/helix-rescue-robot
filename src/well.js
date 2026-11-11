@@ -54,6 +54,7 @@ export class WellSimulation {
     this.startBattery = this.robot.battery;
     this.mission = { state: 'WALK', note: '', energyNeeded: null, hits: {}, verified: false, secureTries: 0, mode: null };
     this.sc = { label: 'Well rescue' };
+    this.linkUp = true;
     this.emit('System', 'info', `Scenario "Well rescue" started (seed ${opts.seed ?? 1}, gate ${this.gateOn ? 'ON' : 'OFF'}). Simulation only; the winch, sling and securing step are design assumptions, not built hardware.`);
   }
 
@@ -132,6 +133,7 @@ export class WellSimulation {
   processApprovals() {
     for (const a of this.pending) {
       if (a.status !== 'pending') continue;
+      if (!this.linkUp) { a.deadline++; if (a.autoAt !== undefined) a.autoAt++; continue; }
       if (a.autoAt !== undefined && this.t >= a.autoAt) { this.approve(a.id); continue; }
       if (this.t > a.deadline) {
         a.status = 'timed_out';
@@ -162,6 +164,15 @@ export class WellSimulation {
   }
   finish(result, reason) { if (this.outcome) return; this.outcome = { result, reason, t: this.t }; this.emit('System', result === 'delivered' ? 'ok' : 'crit', `OUTCOME: ${result} (${reason})`); }
   setState(s) { this.mission.state = s; }
+  setLink(up) {
+    if (up === this.linkUp) return;
+    this.linkUp = up;
+    if (!up) {
+      this.emit('System', 'warn', 'OPERATOR LINK LOST. The unit finishes the action in progress, then holds. A casualty already on the rope keeps being hoisted and carried to the safe zone; no new rope movement starts without the operator.');
+      this.alarms.push({ t: this.t, kind: 'human', unit: 'A', reason: 'Operator link lost: the unit is holding, no approvals can be answered', need: 'communications recovery' });
+      this.emit('Dispatch', 'crit', 'ALARM: operator link lost.', { alarm: true });
+    } else this.emit('System', 'ok', 'Operator link restored. The unit resumes.');
+  }
   startAction(name, secs, onDone) { this.robot.busy = secs; this.robot.busyAction = name; this.robot.onDone = onDone; }
 
   timeToHazard() { const c = this.casualty; return c.health / this.dmgRate(); }
@@ -181,7 +192,7 @@ export class WellSimulation {
     if (r.battery <= 0 && !this.outcome) { r.battery = 0; this.escalate('Battery exhausted: human team requested'); }
     this.processApprovals();
     if (r.busy > 0) { r.busy--; if (r.busy === 0) { const fn = r.onDone; r.onDone = null; r.busyAction = null; fn?.(); } }
-    else this.missionStep();
+    else if (this.linkUp || ['HOIST', 'CARRY', 'HOLD_ESCALATED', 'DONE'].includes(this.mission.state)) this.missionStep();
     this.invariants();
   }
 

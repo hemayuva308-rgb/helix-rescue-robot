@@ -73,6 +73,7 @@ export class Simulation {
     this.fleet = this.units.length > 1;
     this.cur = this.units[0];
     this.alarms = []; this.assists = 0;
+    this.linkUp = true; // operator link; if it drops, units hold (a unit already carrying keeps going to the safe zone)
 
     // fire state
     this.fireI = new Float32Array(this.W * this.H);
@@ -210,6 +211,7 @@ export class Simulation {
   processApprovals() {
     for (const a of this.pending) {
       if (a.status !== 'pending') continue;
+      if (!this.linkUp) { a.deadline++; if (a.autoAt !== undefined) a.autoAt++; continue; } // nobody can answer while the link is down: the clock waits
       if (a.autoAt !== undefined && this.t >= a.autoAt) { this.approve(a.id); continue; }
       if (this.t > a.deadline) {
         a.status = 'timed_out';
@@ -224,6 +226,16 @@ export class Simulation {
     this.emit('Dispatch', 'action', `ALERT SENT to medical and fire teams: ${msg}`);
     if (this.opts.onAlert) this.opts.onAlert(msg, this);
   }
+  setLink(up) {
+    if (up === this.linkUp) return;
+    this.linkUp = up;
+    if (!up) {
+      this.useUnit(this.units[0]);
+      this.emit('System', 'warn', 'OPERATOR LINK LOST. Units finish the action in progress, then hold position. A unit carrying a casualty keeps going to the safe zone. No new lift starts without an answer from the operator.');
+      this.raiseAlarm('human', 'Operator link lost: units are holding position, no approvals can be answered', 'communications recovery');
+    } else this.emit('System', 'ok', 'Operator link restored. Units resume.');
+  }
+
   useUnit(u) { this.cur = u; this.robot = u.robot; this.mission = u.mission; }
   setAllStates(s) { for (const u of this.units) u.mission.state = s; }
 
@@ -943,7 +955,8 @@ export class Simulation {
       else {
         this.sense();
         this.updateCandidates();
-        this.missionStep();
+        const carryingOn = ['CARRY', 'HOLD_ESCALATED', 'DONE'].includes(this.mission.state) || (this.mission.state === 'ASSIST' && this.mission.partner?.mission.state === 'CARRY');
+        if (this.linkUp || carryingOn) this.missionStep();
       }
     }
     this.useUnit(this.units[0]);

@@ -72,6 +72,8 @@ Harvest is a **range extender**, not a power source. Water harvest works only in
 Every event and gate decision is written to a SHA-256 hash chain (`src/audit.js`). The UI has a "Tamper test" that edits a copy and shows the chain breaking.
 
 ## Results (simulation)
+
+Extended evaluation with several casualties, 1 to 3 units, the well and a link-loss drill: `npm run eval:fleet`, written to [`docs/EVAL_FLEET.md`](docs/EVAL_FLEET.md). Highlights: in the flood, 2 units delivered 100/100 casualties against 70/100 for 1 unit; in the fire 73% to 92%; in the collapse extra units did not help (83% to 84%), because there the limits are heavy debris and the gate, not the number of units. Safety violations with the gate on: 0 in every run. Link loss: the alarm was raised in 30/30 runs and nothing broke. The main table below is for one unit and one casualty.
 See `eval/RESULTS.md`. It reports delivered rates, escalations, refusals of over-capacity casualties, safety violations with the gate ON (0) and OFF (many), injection attempts blocked, and time to handoff, including the failures. The gate costs throughput by design: a naive robot with no gate delivers more casualties and breaks safety invariants while doing it.
 
 ## Layout

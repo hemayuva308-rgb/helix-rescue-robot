@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node local-server.js",
     "test": "node --test test/*.test.js",
-    "eval": "node eval/run.js"
+    "eval": "node eval/run.js",
+    "eval:fleet": "node eval/fleet.js"
   },
   "license": "MIT"
 }
