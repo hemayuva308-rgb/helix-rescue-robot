@@ -17,7 +17,7 @@ const ICE = { iceServers: [
   { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
 ] };
 export function createLink({ role, code, onMessage, onStatus = () => {} }) {
-  const seen = new Set(); const conns = []; let peer = null, closed = false, retry = null;
+  const seen = new Set(); const conns = []; let peer = null, closed = false, retry = null, watchdog = null;
   const status = (s) => { try { onStatus(s); } catch (e) { /* ignore */ } };
   function recv(d, via) { if (!d || typeof d !== 'object' || !d.mid || seen.has(d.mid)) return; seen.add(d.mid); if (seen.size > 400) seen.delete(seen.values().next().value); onMessage(d, via); }
   let bc = null;
@@ -41,6 +41,11 @@ export function createLink({ role, code, onMessage, onStatus = () => {} }) {
         };
         startHost();
         window.addEventListener('beforeunload', () => { try { peer && peer.destroy(); } catch (e) { /* ignore */ } });
+        watchdog = setInterval(() => { // the broker drops idle or throttled pages: re-register if that happened
+          if (closed) return;
+          if (!peer || peer.destroyed) { startHost(); return; }
+          if (peer.disconnected) { status('reconnecting to the broker'); try { peer.reconnect(); } catch (e) { /* ignore */ } }
+        }, 8000);
       } else {
         let vi = 0, timer = null;
         peer = new Peer(undefined, { config: ICE });
@@ -63,6 +68,6 @@ export function createLink({ role, code, onMessage, onStatus = () => {} }) {
   startPeer();
   return {
     send(msg) { msg.mid = mid(); seen.add(msg.mid); try { bc && bc.postMessage(msg); } catch (e) { /* ignore */ } for (const c of conns) { try { if (c.open) c.send(msg); } catch (e) { /* ignore */ } } },
-    close() { closed = true; clearTimeout(retry); try { bc && bc.close(); } catch (e) { /* ignore */ } try { peer && peer.destroy(); } catch (e) { /* ignore */ } },
+    close() { closed = true; clearTimeout(retry); clearInterval(watchdog); try { bc && bc.close(); } catch (e) { /* ignore */ } try { peer && peer.destroy(); } catch (e) { /* ignore */ } },
   };
 }

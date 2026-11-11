@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/web/style.css">
 <style>
   body{max-width:560px;margin:0 auto}
-  .op{padding:10px 12px 40px;display:flex;flex-direction:column;gap:10px}
+  .op{padding:10px 12px 40px}
   .oph{display:flex;align-items:center;gap:10px;justify-content:space-between}
   .oph h1{font-size:16px;margin:0}
   .big{width:100%;padding:16px;font-size:17px;font-weight:700;border-radius:12px;border:2px solid var(--mint);background:var(--navy);color:#fff;cursor:pointer}
@@ -26,31 +26,53 @@
   .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;background:var(--mintl);color:var(--navy);margin-right:4px}
   canvas{width:100%;border-radius:10px;background:#eef3f9}
   body.remote #setupBox{display:none}
+  .op{display:flex;flex-direction:column;gap:10px}
+  .col{display:contents}
+  .oph{order:1}#banner{order:2}#pairBox{order:3}#pairedBox{order:4}#btnDeploy{order:5}#lStanding{order:6}#nOp{order:7}#alarm{order:8}#cState{order:9}#cVoice{order:10}#cBrief{order:11}#cReports{order:12}#cUnits{order:13}#cAppr{order:14}#cLive{order:15}#cSense{order:16}#cPeople{order:17}#cAlarms{order:18}#cEvents{order:19}#cBtns{order:20}#setupBox{order:21}
+  /* a laptop or a large screen: a three-column control room instead of the phone column */
+  @media (min-width:1000px){
+    body{max-width:none}
+    .op{max-width:1560px;margin:0 auto;display:grid;grid-template-columns:minmax(300px,.85fr) minmax(440px,1.35fr) minmax(320px,1fr);gap:16px;align-items:start;padding:16px 24px 40px}
+    .col{display:flex;flex-direction:column;gap:10px;min-width:0}
+    #alarm{order:1}#cLive{order:2}#cReports{order:3}#cSense{order:4}#cPeople{order:5}
+    #oMap{max-height:420px}
+    #oLog{max-height:260px!important}
+  }
+
 </style>
 </head>
 <body>
 <div class="op">
-  <div class="oph">
+  <div class="col col1">
+<div class="oph">
     <a class="brand" href="/web/index.html"><img class="logo" src="/web/logo.svg" alt="Helix Command logo"><div><h1>Operator console</h1><p class="note" style="margin:0">handheld screen · outside the danger zone</p></div></a>
     <a class="tab" href="/web/index.html">Dashboard</a>
   </div>
-  <div class="status" id="banner" hidden></div>
-
-  <div class="card" id="pairBox"><h2>Pair with the laptop <small>laptop runs the simulation, this phone is the remote</small></h2>
+<div class="status" id="banner" hidden></div>
+<div class="card" id="pairBox"><h2>Pair with the laptop <small>laptop runs the simulation, this phone is the remote</small></h2>
     <div class="row"><input id="inPair" placeholder="6-character code" maxlength="8" autocapitalize="characters" style="flex:1;min-width:120px;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:10px;font-size:18px;letter-spacing:3px;text-transform:uppercase"><button id="btnPair" class="primary">Connect</button></div>
     <p class="note">On the laptop open the Dashboard: open "Pair a phone as the operator's remote" at the bottom of the right column to see the code and a QR. Without pairing, this page runs its own simulation.</p></div>
-  <div class="card" id="pairedBox" style="display:none"><div class="row"><span id="pairStat" class="note">connecting...</span><button id="btnPing">Test link</button><button id="btnUnpair">Unpair</button></div></div>
-  <button id="btnDeploy" class="big">&#9654; DEPLOY: go in, search and rescue (autonomous)</button>
-  <label class="chk"><input type="checkbox" id="chkStanding" checked> DEPLOY also approves rescue lifts and alerts (standing authorisation). A medic approval for a spinal injury still waits for you.</label>
-  <div class="note">The operator gives one signal: deploy. There is no steering: the units choose their own route from what they sense (heat, breath and air quality, voice, radar) and ask here for approval or help.</div>
-
-  <div id="alarm" class="alarm" style="display:none"></div>
-
-  <div class="state">
+<div class="card" id="pairedBox" style="display:none"><div class="row"><span id="pairStat" class="note">connecting...</span><button id="btnPing">Test link</button><button id="btnUnpair">Unpair</button></div></div>
+<button id="btnDeploy" class="big">&#9654; DEPLOY: go in, search and rescue (autonomous)</button>
+<label class="chk" id="lStanding"><input type="checkbox" id="chkStanding" checked> DEPLOY also approves rescue lifts and alerts (standing authorisation). A medic approval for a spinal injury still waits for you.</label>
+<div class="note" id="nOp">The operator gives one signal: deploy. There is no steering: the units choose their own route from what they sense (heat, breath and air quality, voice, radar) and ask here for approval or help.</div>
+<div class="state" id="cState">
     <div>State<b id="oState">STANDBY</b></div><div>Time<b id="oTime">0s</b></div><div>Rescued<b id="oRescued">0 / 0</b></div><div>Outcome<b id="oOutcome">-</b></div>
   </div>
+<div class="card" id="cUnits"><h2>Units <small>battery and status</small></h2><div id="oUnits"></div></div>
+<div class="card" id="cAppr"><h2>Approvals <small>needs the operator</small></h2><div id="oAppr" class="list"><p class="hint">Nothing waiting.</p></div></div>
+  </div>
 
-  <div class="card"><h2>Voice command <small>plain English, over the operator link</small></h2>
+  <div class="col col2">
+<div id="alarm" class="alarm" style="display:none"></div>
+<div class="card" id="cLive"><h2>Live view <small>what the units have found</small></h2><canvas id="oMap" width="520" height="300"></canvas></div>
+<div class="card" id="cReports"><h2>Field reports <small>photo and radio message from a unit (simulated)</small></h2><label class="chk"><input type="checkbox" id="chkRadio" checked> The unit speaks its reports</label><div id="oReports" style="margin-top:8px"></div></div>
+<div class="card" id="cSense"><h2>What the units sense <small>this drives their decisions</small></h2><div id="oSense" class="mono"></div></div>
+<div class="card" id="cPeople"><h2>People found</h2><div id="oPeople" class="mono"></div></div>
+  </div>
+
+  <div class="col col3">
+<div class="card" id="cVoice"><h2>Voice command <small>plain English, over the operator link</small></h2>
     <div class="row"><button id="btnMic" class="big" style="padding:10px;font-size:15px;width:auto">&#127908; Speak</button>
       <input id="inCmd" placeholder='say or type: "come out"' style="flex:1;min-width:120px;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px"><button id="btnSend">Send</button></div>
     <div class="row" style="margin-top:6px"><button class="q" data-c="come out">Come out</button><button class="q" data-c="hold position">Hold</button><button class="q" data-c="resume">Resume</button></div>
@@ -59,21 +81,14 @@
     <label class="chk"><input type="checkbox" id="chkSpeak" checked> Unit answers out loud</label>
     <p class="note">You can also ask the unit a question, for example "what do you see?" (needs the AI assistant; it can only answer from the live data and cannot act).</p>
     <p class="note">Only four commands exist (come out, hold, resume, deploy). Anything else, including a spoken order to lift or to drive somewhere, is ignored. The microphone needs Chrome or Edge, a click to allow it and an internet connection.</p></div>
-  <div class="card"><h2>Situation brief <small>advisory text, never read by the safety gate</small></h2><button id="btnBrief">Write a brief</button><p class="note" id="vBrief" style="margin-top:8px">-</p></div>
-  <div class="card"><h2>Field reports <small>photo and radio message from a unit (simulated)</small></h2><label class="chk"><input type="checkbox" id="chkRadio" checked> The unit speaks its reports</label><div id="oReports" style="margin-top:8px"></div></div>
-  <div class="card"><h2>Units <small>battery and status</small></h2><div id="oUnits"></div></div>
-  <div class="card"><h2>Approvals <small>needs the operator</small></h2><div id="oAppr" class="list"><p class="hint">Nothing waiting.</p></div></div>
-  <div class="card"><h2>Live view <small>what the units have found</small></h2><canvas id="oMap" width="520" height="300"></canvas></div>
-  <div class="card"><h2>What the units sense <small>this drives their decisions</small></h2><div id="oSense" class="mono"></div></div>
-  <div class="card"><h2>People found</h2><div id="oPeople" class="mono"></div></div>
-  <div class="card"><h2>Alarm log</h2><div id="oAlarms" class="list small"><span class="hint">No alarms.</span></div></div>
-  <div class="card"><h2>Latest events</h2><div id="oLog" class="trace" style="max-height:200px"></div></div>
-
-  <div class="row">
+<div class="card" id="cBrief"><h2>Situation brief <small>advisory text, never read by the safety gate</small></h2><button id="btnBrief">Write a brief</button><p class="note" id="vBrief" style="margin-top:8px">-</p></div>
+<div class="card" id="cAlarms"><h2>Alarm log</h2><div id="oAlarms" class="list small"><span class="hint">No alarms.</span></div></div>
+<div class="card" id="cEvents"><h2>Latest events</h2><div id="oLog" class="trace" style="max-height:200px"></div></div>
+<div class="row" id="cBtns">
     <button id="btnHold">Hold</button><button id="btnLink">Cut link (test)</button><button id="btnRestart">Reset</button>
     <label class="chk"><input type="checkbox" id="chkSound" checked> Alarm sound</label><button id="btnSound">Test sound</button>
   </div>
-  <details id="setupBox"><summary>Instructor setup (not part of the operator's job)</summary>
+<details id="setupBox"><summary>Instructor setup (not part of the operator's job)</summary>
     <div class="setup">
       <label>Scenario <select id="inScn"><option value="fire">Fire</option><option value="water">Water</option><option value="collapse">Collapse</option><option value="well">Well</option></select></label>
       <label>People <select id="inCount"><option>1</option><option>2</option><option selected>3</option><option>4</option></select></label>
@@ -85,6 +100,7 @@
       <label class="chk"><input type="checkbox" id="chkAuto" checked> Auto-approve (demo). Untick to approve by hand</label>
     </div>
   </details>
+  </div>
 </div>
 <script type="module" src="/web/operator.js"></script>
 </body>

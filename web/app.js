@@ -4,6 +4,7 @@ import { verifyChain } from '/src/audit.js';
 import { playAlarm } from '/web/alarm.js';
 import { initHost } from '/web/host-link.js';
 import { askAi } from '/web/ai.js';
+import { humanize, unitName } from '/src/names.js';
 import { FieldReporter, renderReports } from '/web/fieldreports.js';
 
 const CELL = 22;
@@ -203,7 +204,7 @@ function drawAlarms(g) {
     if (sim.t - al.t > 40) continue;
     const x = al.x * CELL + CELL / 2, y = al.y * CELL + CELL / 2, human = al.kind === 'human', col = human ? '255,70,70' : '90,200,255';
     for (const k of [0, 0.5]) { const ph = (now * 0.9 + k) % 1; g.strokeStyle = `rgba(${col},${0.8 * (1 - ph)})`; g.lineWidth = 3; g.beginPath(); g.arc(x, y, 14 + ph * 36, 0, 7); g.stroke(); }
-    g.fillStyle = human ? '#d32f2f' : '#1565c0'; g.font = 'bold 11px system-ui'; g.fillText(human ? `HELP: ${al.need}` : `${al.unit} calls ${al.need}`, x + 18, y - 22);
+    g.fillStyle = human ? '#d32f2f' : '#1565c0'; g.font = 'bold 11px system-ui'; g.fillText(humanize(human ? `HELP: ${al.need}` : `${unitName(al.unit)} calls ${al.need}`), x + 18, y - 22);
   }
 }
 
@@ -246,7 +247,7 @@ function drawRobot(g, u, rx, ry) {
   if (sw) { g.fillStyle = 'rgba(30,100,170,0.38)'; g.beginPath(); g.arc(rx, ry, 22, 0, 7); g.fill(); } // body under the surface: only head, shoulders and arm strokes show
   g.fillStyle = '#0f1f3d'; g.font = 'bold 10px system-ui';
   const tag = r.busy > 0 ? `${r.busyAction} ${r.busy}s` : sw ? (r.carrying ? 'swimming, towing' : 'swimming') : mode === 'wading' ? 'wading' : r.carrying ? 'carrying' : '';
-  if (sim.fleet) { g.fillStyle = UNIT_COLOR[u.id]; g.font = 'bold 12px system-ui'; g.fillText(u.id, rx - 4, ry - 30); g.fillStyle = '#0f1f3d'; g.font = 'bold 10px system-ui'; }
+  if (sim.fleet) { g.fillStyle = UNIT_COLOR[u.id]; g.font = 'bold 12px system-ui'; g.fillText(unitName(u.id), rx - 14, ry - 30); g.fillStyle = '#0f1f3d'; g.font = 'bold 10px system-ui'; }
   if (tag) g.fillText(tag, rx + 24, ry - 22);
 }
 
@@ -291,10 +292,10 @@ function alarmPanel() {
   if (!last) { el.style.display = 'none'; $('fleet').innerHTML = ''; }
   else {
     el.style.display = ''; el.className = 'alarm ' + (last.kind === 'human' ? 'human' : 'unit');
-    el.innerHTML = last.kind === 'human' ? `<b>DISTRESS CALL</b> · t=${last.t}s · unit ${last.unit} · needs <b>${esc(last.need)}</b><br><span>${esc(last.reason)}</span>${humans.length > 1 ? `<br><span>${humans.length} calls for human help so far</span>` : ''}`
-      : `<b>UNIT-TO-UNIT HELP</b> · t=${last.t}s · unit ${last.unit} asks <b>${esc(last.need)}</b><br><span>${esc(last.reason)}</span>`;
+    el.innerHTML = last.kind === 'human' ? `<b>DISTRESS CALL</b> · t=${last.t}s · ${esc(unitName(last.unit))} · needs <b>${esc(humanize(last.need))}</b><br><span>${esc(humanize(last.reason))}</span>${humans.length > 1 ? `<br><span>${humans.length} calls for human help so far</span>` : ''}`
+      : `<b>UNIT-TO-UNIT HELP</b> · t=${last.t}s · ${esc(unitName(last.unit))} asks <b>${esc(humanize(last.need))}</b><br><span>${esc(humanize(last.reason))}</span>`;
   }
-  $('fleet').innerHTML = sim.units.map((u) => `<div class="row"><span><b style="color:${UNIT_COLOR[u.id]}">Unit ${u.id}</b> · ${u.mission.state.replace('_', ' ').toLowerCase()}${u.mission.paired ? ' (paired with ' + u.mission.partner.id + ')' : ''}${u.mission.state === 'ASSIST' ? ' (helping ' + (u.mission.partner?.id ?? '') + ')' : ''}</span><span>battery ${fmt(u.robot.battery)}%</span></div>`).join('');
+  $('fleet').innerHTML = sim.units.map((u) => `<div class="row"><span><b style="color:${UNIT_COLOR[u.id]}">${esc(unitName(u.id))}</b> · ${u.mission.state.replace('_', ' ').toLowerCase()}${u.mission.paired ? ' (paired with ' + unitName(u.mission.partner.id) + ')' : ''}${u.mission.state === 'ASSIST' ? ' (helping ' + unitName(u.mission.partner?.id ?? '') + ')' : ''}</span><span>battery ${fmt(u.robot.battery)}%</span></div>`).join('');
 }
 
 function panels() {
@@ -337,7 +338,7 @@ function panels() {
   for (; ui.traceN < sim.events.length; ui.traceN++) {
     const e = sim.events[ui.traceN];
     const el = document.createElement('div'); el.className = `ev ${e.agent} ${e.kind}`;
-    el.innerHTML = `<time>${e.t}s</time><b>${e.agent}</b>${esc(e.msg)}`; tr.appendChild(el);
+    el.innerHTML = `<time>${e.t}s</time><b>${e.agent}</b>${esc(humanize(e.msg))}`; tr.appendChild(el);
   }
   if (ui.traceN) tr.scrollTop = tr.scrollHeight;
   $('gateStats').textContent = `allowed ${sim.gateStats.allowed} · blocked ${sim.gateStats.blocked} · approvals ${sim.gateStats.approvals}`;
@@ -382,7 +383,7 @@ $('btnTamper').onclick = () => {
 $('btnReport').onclick = async () => {
   const s = sim.summary();
   const ai = await askAi('report', s);
-  const rows = sim.events.filter((e) => e.kind !== 'tick').map((e) => `<tr><td>${e.t}s</td><td>${e.agent}</td><td>${esc(e.msg)}</td></tr>`).join('');
+  const rows = sim.events.filter((e) => e.kind !== 'tick').map((e) => `<tr><td>${e.t}s</td><td>${e.agent}</td><td>${esc(humanize(e.msg))}</td></tr>`).join('');
   const html = `<!doctype html><meta charset="utf-8"><title>Helix incident report</title><style>body{font:14px system-ui;margin:32px;max-width:900px}td,th{border-bottom:1px solid #ddd;padding:4px 8px;text-align:left;vertical-align:top}</style>
   <h1>Helix Command: incident report (simulation)</h1><p><b>Scenario:</b> ${sim.sc.label} · seed ${s.seed} · outcome <b>${s.outcome}</b> · ${s.t}s · battery ${s.startBattery}% → ${s.battery}% · harvested ${s.harvested}%</p>
   <p><b>Casualty:</b> ${s.weightKg} kg, ${s.age}, ${s.unclothed ? 'unclothed (covered: ' + s.covered + ')' : 'clothed'}, spinal flag ${s.spinal}. Health ${s.health}/100.</p>

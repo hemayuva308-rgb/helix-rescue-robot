@@ -9,6 +9,7 @@ import { makeHello, snapshot } from '/src/snapshot.js';
 import { playAlarm } from '/web/alarm.js';
 import { createLink, cleanCode } from '/web/link.js';
 import { askAi } from '/web/ai.js';
+import { humanize, unitName } from '/src/names.js';
 import { FieldReporter, renderReports } from '/web/fieldreports.js';
 import { parseCommand } from '/src/command.js';
 
@@ -63,7 +64,7 @@ async function actCommand(text, source) {
       return;
     }
     if (r.mode === 'llm' && r.intent === 'none') { // not a command: treat it as a question to the unit. Read-only: it can only answer from the live data
-      const snap = vm ? { scenario: vm.scn, time: vm.time, done: vm.done, total: vm.total, outcome: vm.outcome, units: vm.units.map((u) => ({ id: u.id, label: u.label, battery: u.battery })), people: vm.people, alarms: vm.alarms.slice(-3), pending: vm.pending.map((a) => ({ role: a.role, reason: a.reason })), sensing: vm.sense } : {};
+      const snap = vm ? { scenario: vm.scn, time: vm.time, done: vm.done, total: vm.total, outcome: vm.outcome, units: vm.units.map((u) => ({ id: u.id, name: u.name ?? unitName(u.id), label: u.label, battery: u.battery })), people: vm.people, alarms: vm.alarms.slice(-3), pending: vm.pending.map((a) => ({ role: a.role, reason: a.reason })), sensing: vm.sense } : {};
       const a = await askAi('ask', { question: text, snapshot: snap });
       if (a.mode === 'llm') { $('vReply').textContent = `Unit reply: ${a.text}`; speak(a.text); return; }
     }
@@ -112,16 +113,16 @@ function render(v) {
   $('oState').textContent = !v.deployed ? 'STANDBY' : !v.linkUp ? 'LINK LOST' : v.recall ? 'COMING OUT' : v.held ? 'ON HOLD' : v.outcome ? 'FINISHED' : 'ACTIVE';
   $('oTime').textContent = `${v.time}s`; $('oRescued').textContent = `${v.done} / ${v.total}`; $('oOutcome').textContent = v.outcome ? v.outcome.result.replace('_', ' ') : '-';
   const al = $('alarm'), lastA = v.alarms[v.alarms.length - 1];
-  if (lastA) { al.style.display = ''; al.className = 'alarm ' + (lastA.kind === 'human' ? 'human' : 'unit'); al.innerHTML = lastA.kind === 'human' ? `<b>DISTRESS CALL</b> · t=${lastA.t}s · unit ${lastA.unit} needs <b>${esc(lastA.need)}</b><br><span>${esc(lastA.reason)}</span>` : `<b>UNIT-TO-UNIT HELP</b> · t=${lastA.t}s · unit ${lastA.unit} asks <b>${esc(lastA.need)}</b><br><span>${esc(lastA.reason)}</span>`; } else al.style.display = 'none';
+  if (lastA) { al.style.display = ''; al.className = 'alarm ' + (lastA.kind === 'human' ? 'human' : 'unit'); al.innerHTML = lastA.kind === 'human' ? `<b>DISTRESS CALL</b> · t=${lastA.t}s · ${esc(unitName(lastA.unit))} needs <b>${esc(lastA.need)}</b><br><span>${esc(lastA.reason)}</span>` : `<b>UNIT-TO-UNIT HELP</b> · t=${lastA.t}s · ${esc(unitName(lastA.unit))} asks <b>${esc(lastA.need)}</b><br><span>${esc(lastA.reason)}</span>`; } else al.style.display = 'none';
   if (v.alarms.length > alarmSeen && $('chkSound').checked) playAlarm(v.alarms.slice(alarmSeen).some((x) => x.kind === 'human') ? 'human' : 'unit');
   alarmSeen = v.alarms.length;
-  $('oUnits').innerHTML = v.units.map((u) => { const b = Math.max(0, Math.min(100, u.battery)), col = b < 20 ? '#d32f2f' : b < 40 ? '#e08a00' : '#4f7fd9'; return `<div class="row"><span><b style="color:${UCOL[u.id]}">Unit ${u.id}</b> · ${esc(u.label)}</span><span>${fmt(b)}%</span></div><div class="ubar"><div style="width:${b}%;background:${col}"></div></div>`; }).join('') + (v.harvested ? `<p class="note">Energy gathered from the environment so far: ${fmt(v.harvested)}%</p>` : '');
+  $('oUnits').innerHTML = v.units.map((u) => { const b = Math.max(0, Math.min(100, u.battery)), col = b < 20 ? '#d32f2f' : b < 40 ? '#e08a00' : '#4f7fd9'; return `<div class="row"><span><b style="color:${UCOL[u.id]}">${esc(u.name ?? unitName(u.id))}</b> · ${esc(u.label)}</span><span>${fmt(b)}%</span></div><div class="ubar"><div style="width:${b}%;background:${col}"></div></div>`; }).join('') + (v.harvested ? `<p class="note">Energy gathered from the environment so far: ${fmt(v.harvested)}%</p>` : '');
   const ap = $('oAppr'); const key = v.pending.map((a) => a.id).join('|'); if (ap.dataset.key !== key || !v.pending.length) {
     ap.dataset.key = key; ap.innerHTML = v.pending.length ? '' : '<p class="hint">Nothing waiting.</p>';
     for (const a of v.pending) { const d = document.createElement('div'); d.className = 'appr'; d.innerHTML = `<div><b>${a.role}</b>: ${esc(a.reason)}</div><div class="hint">answer in time or the units hold and call for help</div><div class="btns"><button class="ok">Approve</button><button class="no">Reject</button></div>`; d.querySelector('.ok').onclick = () => actApprove(a.id, true); d.querySelector('.no').onclick = () => actApprove(a.id, false); ap.appendChild(d); }
   }
   $('oSense').innerHTML = v.sense.map(esc).join('<br>'); $('oPeople').innerHTML = v.people.length ? v.people.map(esc).join('<br>') : 'none found yet';
-  $('oAlarms').innerHTML = v.alarms.length ? v.alarms.slice().reverse().slice(0, 8).map((a) => `<div><span class="chip ${a.kind === 'human' ? 'block' : 'appr'}">${a.kind === 'human' ? 'HUMAN HELP' : 'UNIT HELP'}</span>t=${a.t}s unit ${a.unit}: ${esc(a.need)} <span class="hint">${esc(a.reason)}</span></div>`).join('') : '<span class="hint">No alarms.</span>';
+  $('oAlarms').innerHTML = v.alarms.length ? v.alarms.slice().reverse().slice(0, 8).map((a) => `<div><span class="chip ${a.kind === 'human' ? 'block' : 'appr'}">${a.kind === 'human' ? 'HUMAN HELP' : 'UNIT HELP'}</span>t=${a.t}s ${esc(unitName(a.unit))}: ${esc(a.need)} <span class="hint">${esc(a.reason)}</span></div>`).join('') : '<span class="hint">No alarms.</span>';
   const lg = $('oLog'); for (const e of v.ev) if (e.i >= logN) { const d = document.createElement('div'); d.className = 'ev ' + e.kind; d.innerHTML = `<span class="t">${e.t}s</span> <b>${e.agent}</b> ${esc(e.msg)}`; lg.appendChild(d); } logN = Math.max(logN, v.en); lg.scrollTop = lg.scrollHeight;
   if (mode === 'local' || v.deployed) setDeployButton(v.deployed);
   map(v);
@@ -135,7 +136,7 @@ function frame(ts) {
     vm = snapshot(sim, $('inScn').value, { deployed, held });
   }
   render(vm);
-  if (mode === 'remote') $('pairStat').innerHTML = hello && Date.now() - lastMsg < 3500 ? `<b style="color:#12306b">linked to the laptop</b> · code ${code} · via ${via || 'link'}` : `looking for the laptop (code ${code})... ${esc(net)}`;
+  if (mode === 'remote') $('pairStat').innerHTML = hello && Date.now() - lastMsg < 3500 ? `<b style="color:#12306b">linked to the laptop</b> · code ${code} · via ${via || 'link'}` : `looking for the laptop (code ${code})... ${/peer-unavailable|no answer/.test(net) ? 'the laptop was not found under this code. On the laptop keep the Dashboard tab open and visible (not asleep), check the code letter by letter, and look for its "internet link ready" label at the top.' : esc(net)}`;
   requestAnimationFrame(frame);
 }
 
@@ -198,7 +199,7 @@ $('btnUnpair').onclick = disconnect;
 $('btnBrief').onclick = async () => {
   if (!vm) { $('vBrief').textContent = 'Nothing to brief yet.'; return; }
   $('vBrief').textContent = 'Writing the briefing...';
-  const r = await askAi('brief', { scenario: vm.scn, time: vm.time, deployed: vm.deployed, done: vm.done, total: vm.total, outcome: vm.outcome, units: vm.units.map((u) => ({ id: u.id, label: u.label, battery: u.battery })), people: vm.people, alarms: vm.alarms.slice(-3), pending: vm.pending.map((a) => ({ role: a.role, reason: a.reason })) });
+  const r = await askAi('brief', { scenario: vm.scn, time: vm.time, deployed: vm.deployed, done: vm.done, total: vm.total, outcome: vm.outcome, units: vm.units.map((u) => ({ id: u.id, name: u.name ?? unitName(u.id), label: u.label, battery: u.battery })), people: vm.people, alarms: vm.alarms.slice(-3), pending: vm.pending.map((a) => ({ role: a.role, reason: a.reason })) });
   $('vBrief').innerHTML = `${esc(r.text)} <span class="note">(${r.mode === 'llm' ? 'written by the AI assistant, advisory only' : 'standard summary, AI not used: ' + esc(r.why ?? 'no AI model connected')})</span>`;
 };
 $('btnPing').onclick = () => { if (mode !== 'remote') { $('vReply').textContent = 'Link test: not paired with a laptop (this page is running its own simulation).'; return; } pingAt = Date.now(); link.send({ t: 'ping', n: pingAt }); $('vReply').textContent = 'Link test: sent, waiting...'; setTimeout(() => { if (pingAt && $('vReply').textContent.endsWith('waiting...')) $('vReply').textContent = 'Link test: NO ANSWER from the laptop. The link is not working.'; }, 3500); };

@@ -3,6 +3,7 @@
 // optional AI model (advisory) or by a template. Nothing here influences the simulation or the safety gate.
 import { renderFrame } from '/web/camera.js';
 import { askAi } from '/web/ai.js';
+import { humanize, unitName } from '/src/names.js';
 
 const idOf = (m) => (String(m).match(/\b[CD]\d\b/) ?? [''])[0];
 
@@ -53,8 +54,8 @@ export class FieldReporter {
     try {
       let img = ''; try { img = renderFrame(sim, scn, f.focus, f.unit, 360, 216).toDataURL('image/jpeg', 0.62); } catch (e) { /* no canvas */ }
       const battery = (sim.units ?? [{ id: 'A', robot: sim.robot }]).find((u) => u.id === f.unit)?.robot.battery;
-      const ai = await askAi('caption', { unit: f.unit, kind: f.kind, urgent: f.urgent, text: f.text, time: sim.t, battery: battery !== undefined ? Math.round(battery) : undefined });
-      this.onReport({ id: `${sim.t}-${f.kind}-${this.count}`, t: sim.t, unit: f.unit, kind: f.kind, urgent: f.urgent, facts: f.text, caption: ai.text ?? f.text, ai: ai.mode === 'llm', img });
+      const ai = await askAi('caption', { unit: unitName(f.unit), kind: f.kind, urgent: f.urgent, text: humanize(f.text), time: sim.t, battery: battery !== undefined ? Math.round(battery) : undefined });
+      this.onReport({ id: `${sim.t}-${f.kind}-${this.count}`, t: sim.t, unit: f.unit, kind: f.kind, urgent: f.urgent, facts: humanize(f.text), caption: humanize(ai.text ?? f.text), ai: ai.mode === 'llm', img });
     } finally { this.busy = false; }
   }
 }
@@ -64,7 +65,7 @@ export function renderReports(el, reports, { onSpeak } = {}) {
   el.innerHTML = reports.length ? '' : '<p class="hint">No field reports yet. A unit sends one when it finds someone, finds someone who did not survive, or needs help.</p>';
   for (const r of reports.slice().reverse()) {
     const d = document.createElement('div'); d.className = 'rep' + (r.urgent ? ' urgent' : '');
-    d.innerHTML = `${r.img ? `<img alt="simulated thermal camera frame" src="${r.img}">` : ''}<div><b>Unit ${esc(r.unit)} · t=${r.t}s · ${esc(r.kind === 'found' ? 'found someone' : r.kind === 'lost' ? 'no vital signs' : 'needs help')}</b>${r.urgent ? ' <span class="chip block">URGENT</span>' : ''}<p>${esc(r.caption)}</p><p class="hint">${r.ai ? 'message written by the AI assistant' : 'standard message'} · frame is simulated${onSpeak ? ' · <a href="#" class="spk">speak</a>' : ''}</p></div>`;
+    d.innerHTML = `${r.img ? `<img alt="simulated thermal camera frame" src="${r.img}">` : ''}<div><b>${esc(unitName(r.unit))} · t=${r.t}s · ${esc(r.kind === 'found' ? 'found someone' : r.kind === 'lost' ? 'no vital signs' : 'needs help')}</b>${r.urgent ? ' <span class="chip block">URGENT</span>' : ''}<p>${esc(r.caption)}</p><p class="hint">${r.ai ? 'message written by the AI assistant' : 'standard message'} · frame is simulated${onSpeak ? ' · <a href="#" class="spk">speak</a>' : ''}</p></div>`;
     if (onSpeak) d.querySelector('.spk').onclick = (e) => { e.preventDefault(); onSpeak(r.caption); };
     el.appendChild(d);
   }

@@ -68,16 +68,16 @@ async function chat(p, messages, timeoutMs = 25000) {
 }
 
 export function templateBrief(d = {}) {
-  const units = (d.units ?? []).map((u) => `unit ${u.id} is ${u.label ?? 'working'} (battery ${Math.round(u.battery)}%)`).join('; ');
+  const units = (d.units ?? []).map((u) => `${u.name ?? 'unit ' + u.id} is ${u.label ?? 'working'} (battery ${Math.round(u.battery)}%)`).join('; ');
   const alarm = (d.alarms ?? []).slice(-1)[0];
   return `At ${d.time ?? 0} s: ${units || 'no units reported'}. ${d.done ?? 0} of ${d.total ?? 0} casualties are rescued. ${alarm ? `Latest alarm: ${alarm.need} needed (${alarm.reason}).` : 'No alarms.'} ${(d.pending ?? []).length ? `${d.pending.length} approval(s) waiting for the operator.` : 'Nothing is waiting for the operator.'}`;
 }
 export function templateCaption(d = {}) {
-  const who = d.unit ? `Unit ${d.unit}` : 'Unit';
+  const who = d.unit && d.unit.length > 1 ? d.unit : d.unit ? `Unit ${d.unit}` : 'Unit';
   return `${who}: ${d.text ?? d.kind ?? 'update'}${d.urgent ? ' This is urgent.' : ''}`;
 }
 export function templateAsk(d = {}) {
-  const u = (d.units ?? []).map((x) => `unit ${x.id} ${x.label ?? ''} (battery ${Math.round(x.battery)}%)`).join('; ');
+  const u = (d.units ?? []).map((x) => `${x.name ?? 'unit ' + x.id} ${x.label ?? ''} (battery ${Math.round(x.battery)}%)`).join('; ');
   return `I have no AI model connected, so here is the plain status: ${u || 'no units'}; ${d.done ?? 0} of ${d.total ?? 0} rescued.${(d.alarms ?? []).length ? ` Latest alarm: ${d.alarms[d.alarms.length - 1].need}.` : ''}`;
 }
 

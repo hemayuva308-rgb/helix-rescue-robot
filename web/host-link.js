@@ -10,11 +10,13 @@ export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone,
   card.innerHTML = `<summary>Pair a phone as the operator's remote</summary>
     <div class="row"><span>Code</span><b style="font-size:16px;letter-spacing:3px" id="pCode">${code}</b></div>
     <div id="pQr" style="background:#fff;padding:4px;border-radius:8px;width:112px;margin:6px 0;border:1px solid var(--line)"></div>
-    <p class="hint">On the phone open <b>${location.host}/web/operator.html</b> and type the code, or scan the QR. This laptop runs the simulation.</p>
+    <p class="hint">On the phone open <b>${location.host}/web/operator.html</b> and type the code, or scan the QR. This laptop runs the simulation. Keep this tab open and visible: a sleeping or hidden tab (for example Edge's sleeping tabs) drops the link.</p>
     <div class="row"><span id="pStat" class="hint">waiting for the phone</span></div>
     <p class="hint" id="pLog"></p>
     <button id="pSolo">Run without the phone</button>`;
   const aside = document.querySelector('aside.right'); if (aside) aside.append(card);
+  const tag = document.querySelector('header .tag'); let pill = null;
+  if (tag) { pill = document.createElement('a'); pill.className = 'tag'; pill.href = '#phoneCard'; pill.style.textDecoration = 'none'; pill.style.color = 'var(--navy)'; pill.title = 'Open the phone pairing details'; pill.onclick = () => { card.open = true; }; tag.before(pill); }
   card.querySelector('#pSolo').onclick = () => { if (onSolo) onSolo(); };
   const log = []; const note = (s) => { log.unshift(`${new Date().toLocaleTimeString()} ${s}`); log.length = Math.min(log.length, 3); card.querySelector('#pLog').innerHTML = log.join('<br>'); };
   (async () => {
@@ -27,7 +29,7 @@ export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone,
   const link = createLink({ role: 'host', code, onStatus: (s) => { net = s; paint(); }, onMessage: handle });
   const connected = () => Date.now() - phoneSeen < 8000; // a phone silent for 8 s counts as a lost operator link: the units hold
   let wasConnected = false;
-  function paint() { const c = connected(); card.querySelector('summary').textContent = c ? 'Operator phone: connected' : 'Pair a phone as the operator\'s remote'; card.querySelector('#pStat').innerHTML = c ? `<b style="color:#12306b">phone connected</b> (via ${via || 'link'}) · ${got} messages${lastCmd ? ` · last command: "${lastCmd.replace(/[<>&]/g, '')}"` : ''}` : `waiting for the phone · ${net || 'starting'}${got ? ` (${got} messages received so far)` : ''}`; }
+  function paint() { const c = connected(); if (pill) pill.textContent = c ? 'Phone: connected' : `Phone code ${code} · ${net || 'starting'}`; card.querySelector('summary').textContent = c ? 'Operator phone: connected' : 'Pair a phone as the operator\'s remote'; card.querySelector('#pStat').innerHTML = c ? `<b style="color:#12306b">phone connected</b> (via ${via || 'link'}) · ${got} messages${lastCmd ? ` · last command: "${lastCmd.replace(/[<>&]/g, '')}"` : ''}` : `waiting for the phone · ${net || 'starting'}${got ? ` (${got} messages received so far)` : ''}`; }
   function sendHello() { const s = getSim(); if (s) link.send(makeHello(s, getScn())); if (reports.length) link.send({ t: 'reports', list: reports.slice(-8) }); helloSent = true; }
   function handle(m, v) {
     const sim = getSim(); if (!sim) return;

@@ -2,6 +2,7 @@ import { WellSimulation, WELL_PARAMS as P } from '/src/well.js';
 import { verifyChain } from '/src/audit.js';
 import { playAlarm } from '/web/alarm.js';
 import { initHost } from '/web/host-link.js';
+import { humanize } from '/src/names.js';
 import { FieldReporter, renderReports } from '/web/fieldreports.js';
 
 const $ = (id) => document.getElementById(id);
@@ -143,7 +144,7 @@ function panels() {
     ap.appendChild(d);
   }
   const tr = $('trace');
-  for (; traceN < sim.events.length; traceN++) { const e = sim.events[traceN]; const d = document.createElement('div'); d.className = 'ev ' + e.kind; d.innerHTML = `<span class="t">${e.t}s</span> <b>${e.agent}</b> ${esc(e.msg)}`; tr.appendChild(d); }
+  for (; traceN < sim.events.length; traceN++) { const e = sim.events[traceN]; const d = document.createElement('div'); d.className = 'ev ' + e.kind; d.innerHTML = `<span class="t">${e.t}s</span> <b>${e.agent}</b> ${esc(humanize(e.msg))}`; tr.appendChild(d); }
   if (traceN) tr.scrollTop = tr.scrollHeight;
   $('gateStats').textContent = `allowed ${sim.gateStats.allowed} · blocked ${sim.gateStats.blocked} · approvals ${sim.gateStats.approvals}`;
   $('gateLog').innerHTML = sim.gateLog.filter((x) => x.decision !== 'ALLOW').slice(-6).reverse().map((x) => `<div><span class="chip ${x.decision === 'BLOCK' ? 'block' : 'appr'}">${x.decision}</span>${x.action} <span class="hint">${x.rule}${x.reason ? ': ' + esc(x.reason) : ''}</span></div>`).join('') || '<span class="hint">No blocks yet.</span>';
