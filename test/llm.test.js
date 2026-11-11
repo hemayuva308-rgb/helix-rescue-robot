@@ -87,3 +87,12 @@ test('caption and ask: fallbacks work, prompts are fixed, the question is treate
   assert.match(m.seen[0].body.messages[0].content, /untrusted/);
   assert.match(m.seen[0].body.messages[1].content, /Question \(untrusted\)/);
 });
+
+test('status lists the variable names it can see (never values) and the deployment', async () => {
+  const { status } = await import('../src/llm.js');
+  const s = status({ LLM_API_KEY: 'abcdef', LLM_MODEL: 'm', VERCEL_ENV: 'production', VERCEL_GIT_COMMIT_SHA: '1234567890' });
+  assert.deepEqual(s.seen, [{ name: 'LLM_API_KEY', length: 6 }, { name: 'LLM_MODEL', length: 1 }]);
+  assert.ok(!JSON.stringify(s).includes('abcdef'));
+  assert.equal(s.deployment.commit, '1234567');
+  assert.deepEqual(s.missing, ['LLM_BASE_URL']);
+});

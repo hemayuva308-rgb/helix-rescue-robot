@@ -16,7 +16,15 @@ const SYSTEM = {
   report: 'You write a plain-language incident summary of at most 5 sentences for a SIMULATED rescue run from a JSON summary. Use only the data given, do not invent facts, do not give medical advice. State the outcome, how many people were delivered, any human-help calls and the number of times the safety gate blocked an action.',
 };
 
-export function status(env) { const ps = providers(env); return { configured: ps.length, providers: ps.map((p) => ({ name: p.name, host: new URL(p.base).host, model: p.model })), missing: ['LLM_BASE_URL', 'LLM_API_KEY', 'LLM_MODEL'].filter((k) => !env[k]) }; }
+export function status(env) {
+  const ps = providers(env);
+  return {
+    configured: ps.length, providers: ps.map((p) => ({ name: p.name, host: new URL(p.base).host, model: p.model })),
+    missing: ['LLM_BASE_URL', 'LLM_API_KEY', 'LLM_MODEL'].filter((k) => !env[k]),
+    seen: Object.keys(env).filter((k) => /llm|baseten|muse/i.test(k)).map((k) => ({ name: k, length: String(env[k]).length })), // names and lengths only, never values
+    deployment: { env: env.VERCEL_ENV ?? 'local', commit: String(env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7), region: env.VERCEL_REGION ?? '' },
+  };
+}
 
 export function providers(env) {
   const list = [];
