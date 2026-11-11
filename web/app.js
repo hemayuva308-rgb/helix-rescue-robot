@@ -83,28 +83,37 @@ function draw() {
   r.trail.forEach((p, i) => { const px = p.x * CELL + CELL / 2, py = p.y * CELL + CELL / 2; i ? g.lineTo(px, py) : g.moveTo(px, py); }); g.stroke();
   if (sim.mission.path?.length) { g.setLineDash([4, 4]); g.strokeStyle = 'rgba(255,255,255,0.6)'; g.beginPath(); g.moveTo(r.x * CELL + CELL / 2, r.y * CELL + CELL / 2); for (const p of sim.mission.path) g.lineTo(p.x * CELL + CELL / 2, p.y * CELL + CELL / 2); g.stroke(); g.setLineDash([]); }
   g.lineWidth = 1;
-  // detections
+  // detections (rings disappear once that person has been picked up)
   for (const c of sim.candidates) {
+    if (c.handled) continue;
     const col = c.status === 'verified' ? '#4cd694' : c.status === 'rejected' ? '#8aa0b6' : '#ffb454';
     g.strokeStyle = col; g.setLineDash(c.status === 'verified' ? [] : [3, 3]); g.lineWidth = 2;
     g.beginPath(); g.arc(c.x * CELL + CELL / 2, c.y * CELL + CELL / 2, CELL * 0.8, 0, 7); g.stroke(); g.setLineDash([]);
     g.fillStyle = col; g.font = '10px system-ui'; g.fillText(`#${c.id}`, c.x * CELL + CELL * 1.2, c.y * CELL - 2);
   }
-  // ground truth
-  if (truth) {
-    for (const d of sim.decoys) { g.fillStyle = '#ffb454aa'; g.fillRect(d.x * CELL + 4, d.y * CELL + 4, CELL - 8, CELL - 8); g.fillStyle = '#fff'; g.font = '9px system-ui'; g.fillText('decoy', d.x * CELL - 4, d.y * CELL - 2); }
-    for (const c of sim.casualties) { g.fillStyle = c.alive ? '#ff5fa2' : '#555'; g.beginPath(); g.arc(Math.round(c.fx) * CELL + CELL / 2, Math.round(c.fy) * CELL + CELL / 2, 7, 0, 7); g.fill(); g.fillStyle = '#fff'; g.fillText(`${c.weightKg}kg`, Math.round(c.fx) * CELL - 4, Math.round(c.fy) * CELL - 3); }
-  } else {
-    for (const c of sim.casualties) if (c.verifiedOnce && !c.delivered) { g.fillStyle = '#ff5fa2'; g.beginPath(); g.arc(Math.round(c.fx) * CELL + CELL / 2, Math.round(c.fy) * CELL + CELL / 2, 7, 0, 7); g.fill(); }
+  if (truth) for (const d of sim.decoys) { g.fillStyle = '#ffb454aa'; g.fillRect(d.x * CELL + 4, d.y * CELL + 4, CELL - 8, CELL - 8); g.fillStyle = '#fff'; g.font = '9px system-ui'; g.fillText('decoy', d.x * CELL - 4, d.y * CELL - 2); }
+  // people: one head per person still at the scene. Dim = not found yet, bright = found. Picked-up people disappear from the scene.
+  const found = sim.casualties.filter((c) => c.alive && !c.delivered && !c.aboard && !c.referred && c.verifiedOnce).map((c) => ({ c, tt: sim.timeToHazard(c) })).sort((p, q) => p.tt - q.tt);
+  for (const c of sim.casualties) {
+    if (c.delivered || c.aboard) continue;
+    const px = Math.round(c.fx) * CELL + CELL / 2, py = Math.round(c.fy) * CELL + CELL / 2;
+    if (!c.alive) { drawPerson(g, px, py, { alpha: 0.5, skin: '#777', shirt: '#444' }); g.fillStyle = '#999'; g.font = '10px system-ui'; g.fillText(`${c.id} lost`, px + 12, py + 4); continue; }
+    const isFound = c.verifiedOnce;
+    drawPerson(g, px, py, { alpha: isFound ? 1 : 0.3 });
+    g.font = 'bold 10px system-ui'; g.fillStyle = isFound ? '#fff' : '#8aa0b6';
+    if (isFound) { const rank = found.findIndex((f) => f.c === c) + 1; g.fillText(`${c.id}${sim.multi ? ' health ' + Math.round(c.health) : ''}`, px - 12, py + 24); if (sim.multi && found.length > 1 && !c.referred) { g.fillStyle = rank === 1 ? '#ff6b6b' : '#ffd08a'; g.fillText(`rescue #${rank}`, px - 12, py - 14); } }
+    else g.fillText('not found yet', px - 24, py + 24);
   }
-  for (const c of sim.casualties) if (sim.multi && c.alive && !c.delivered && (truth || c.verifiedOnce)) { g.fillStyle = '#fff'; g.font = 'bold 10px system-ui'; g.fillText(`${c.id}${c.verifiedOnce ? ' health ' + Math.round(c.health) : ''}`, Math.round(c.fx) * CELL - 6, Math.round(c.fy) * CELL + CELL + 11); }
-  for (const c of sim.casualties) if (c.delivered) { g.fillStyle = '#4cd694'; g.beginPath(); g.arc(Math.round(c.fx) * CELL + CELL / 2, Math.round(c.fy) * CELL + CELL / 2, 7, 0, 7); g.fill(); }
+  // rescued people stand in the safe zone, in the order they were delivered
+  const sz = sim.sc.safeZones[0]; let k = 0;
+  for (const c of sim.casualties) if (c.delivered) { drawPerson(g, sz.x0 * CELL + 14 + (k % 3) * 22, sz.y0 * CELL + 34 + Math.floor(k / 3) * 26, { skin: '#e0bc9f', shirt: '#2fbf7a' }); k++; }
+  if (k) { g.fillStyle = '#7be0ab'; g.font = 'bold 10px system-ui'; g.fillText(`rescued ${k}`, sz.x0 * CELL + 3, sz.y0 * CELL + 24); }
   // robot (humanoid, seen from above: head, shoulders, arms; swims when the water is deep)
   const rx = r.x * CELL + CELL / 2, ry = r.y * CELL + CELL / 2;
   drawRobot(g, r, rx, ry);
   effects(g, r, rx, ry);
   // legend
-  $('legend').innerHTML = [['#35d0e6', 'Helix unit'], ['#ff5fa2', 'verified casualty'], ['#ffb454', 'unverified detection'], ['#4cd694', 'verified / delivered'], ['#ff7a28', sim.scenario === 'fire' ? 'fire & heat' : sim.scenario === 'water' ? 'current (lines)' : 'debris (red slash = too heavy)']].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
+  $('legend').innerHTML = [['#35d0e6', 'Helix unit'], ['#e98a3c', 'person (dim = not found yet)'], ['#2fbf7a', 'rescued, in safe zone'], ['#ffb454', 'unverified detection'], ['#ff7a28', sim.scenario === 'fire' ? 'fire & heat' : sim.scenario === 'water' ? 'current (lines)' : 'debris (red slash = too heavy)']].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
 }
 
 
@@ -133,6 +142,7 @@ function effects(g, r, rx, ry) {
   }
   // which sensor types back each detection
   for (const c of sim.candidates) {
+    if (c.handled) continue;
     const names = Object.keys(c.hits).filter((k) => c.hits[k] >= 2).map((k) => SENSE_LABEL[k]);
     const all = Object.keys(c.hits).map((k) => SENSE_LABEL[k]);
     const txt = (names.length ? names : all).join(' + ') + (c.status === 'verified' ? ' VERIFIED' : c.status === 'rejected' ? ' = decoy' : ' ?');
@@ -150,6 +160,14 @@ function effects(g, r, rx, ry) {
   }
 }
 
+
+function drawPerson(g, x, y, { alpha = 1, skin = '#e0bc9f', shirt = '#e98a3c' } = {}) {
+  g.save(); g.globalAlpha = alpha; g.translate(x, y); g.scale(1.4, 1.4); g.translate(-x, -y);
+  g.fillStyle = shirt; g.beginPath(); g.ellipse(x, y + 7, 9, 5.5, 0, 0, 7); g.fill();   // shoulders
+  g.fillStyle = skin; g.beginPath(); g.arc(x, y, 6.5, 0, 7); g.fill();                  // head
+  g.fillStyle = '#3a2a20'; g.beginPath(); g.arc(x, y - 1.5, 6.5, Math.PI * 1.05, Math.PI * 1.95); g.fill(); // hair
+  g.restore();
+}
 
 // ---------------------------------------------------------------- robot figure + ratings
 const RATING = { wadeM: 1.0, swimM: 2.5 }; // design assumptions: wades up to waist depth, swims (buoyancy + propulsion module) deeper, depth limit 2.5 m
