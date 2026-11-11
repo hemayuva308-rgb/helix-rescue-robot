@@ -61,3 +61,16 @@ test('reasoning text in <think> tags is removed from the answer', async () => {
   m.srv.close();
   assert.equal(out.body.text, 'Unit A is searching.');
 });
+
+test('the reason a fallback was used is reported, without any secret', async () => {
+  const none = await handle('brief', { time: 1 }, {});
+  assert.match(none.body.why, /not configured/);
+  const bad = await mock('x', 401);
+  const failed = await handle('brief', { time: 1 }, { LLM_BASE_URL: bad.url, LLM_API_KEY: 'top-secret', LLM_MODEL: 'm' }, 'ip10');
+  bad.srv.close();
+  assert.match(failed.body.why, /401/);
+  assert.ok(!JSON.stringify(failed.body).includes('top-secret'));
+  const { status } = await import('../src/llm.js');
+  assert.deepEqual(status({}).missing, ['LLM_BASE_URL', 'LLM_API_KEY', 'LLM_MODEL']);
+  assert.equal(status({ LLM_BASE_URL: 'https://x.y/v1', LLM_API_KEY: 'k', LLM_MODEL: 'm' }).configured, 1);
+});

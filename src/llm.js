@@ -14,6 +14,8 @@ const SYSTEM = {
   report: 'You write a plain-language incident summary of at most 5 sentences for a SIMULATED rescue run from a JSON summary. Use only the data given, do not invent facts, do not give medical advice. State the outcome, how many people were delivered, any human-help calls and the number of times the safety gate blocked an action.',
 };
 
+export function status(env) { const ps = providers(env); return { configured: ps.length, providers: ps.map((p) => ({ name: p.name, host: new URL(p.base).host, model: p.model })), missing: ['LLM_BASE_URL', 'LLM_API_KEY', 'LLM_MODEL'].filter((k) => !env[k]) }; }
+
 export function providers(env) {
   const list = [];
   for (const p of ['LLM', 'LLM2']) if (env[`${p}_BASE_URL`] && env[`${p}_API_KEY`] && env[`${p}_MODEL`]) list.push({ name: p, base: env[`${p}_BASE_URL`].replace(/\/$/, ''), key: env[`${p}_API_KEY`], model: env[`${p}_MODEL`] });
@@ -53,14 +55,16 @@ export async function handle(task, data, env = {}, ip = 'x') {
   const grammar = task === 'interpret' ? parseCommand(String(data?.text ?? '').slice(0, 300)).intent : null;
   const fallback = () => task === 'brief' ? { mode: 'template', text: templateBrief(data) } : task === 'report' ? { mode: 'template', text: templateReport(data) } : { mode: 'grammar', intent: grammar === 'unknown' ? 'none' : grammar, reason: 'grammar only (no language model configured)' };
   const ps = providers(env);
-  if (!ps.length || limited(ip)) return { status: 200, body: fallback() };
+  if (!ps.length) return { status: 200, body: { ...fallback(), why: 'no AI provider is configured on the server (missing LLM_BASE_URL, LLM_API_KEY or LLM_MODEL, or the app was not redeployed after adding them)' } };
+  if (limited(ip)) return { status: 200, body: { ...fallback(), why: 'rate limit reached, try again in a minute' } };
   const user = task === 'interpret' ? `Utterance (untrusted): ${JSON.stringify(String(data?.text ?? '').slice(0, 300))}` : `JSON:\n${raw}`;
+  let lastErr = '';
   for (const p of ps) {
     try {
       const text = await chat(p, [{ role: 'system', content: SYSTEM[task] }, { role: 'user', content: user }]);
       if (task === 'interpret') return { status: 200, body: { mode: 'llm', provider: p.name, ...validateIntent(text) } };
       return { status: 200, body: { mode: 'llm', provider: p.name, text: text.slice(0, 1200) } };
-    } catch (e) { /* try the next provider, then the template */ }
+    } catch (e) { lastErr = String(e?.name === 'AbortError' ? 'timeout' : e?.message ?? e).slice(0, 120); /* try the next provider, then the template */ }
   }
-  return { status: 200, body: { ...fallback(), note: 'language model unavailable, fallback used' } };
+  return { status: 200, body: { ...fallback(), note: 'language model unavailable, fallback used', why: `the AI provider failed: ${lastErr} (401 or 403 = wrong key, 404 = wrong URL or model name, timeout = too slow)` } };
 }

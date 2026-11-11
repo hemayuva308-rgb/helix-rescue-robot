@@ -186,7 +186,7 @@ $('btnBrief').onclick = async () => {
   if (!vm) { $('vBrief').textContent = 'Nothing to brief yet.'; return; }
   $('vBrief').textContent = 'Writing the briefing...';
   const r = await askAi('brief', { scenario: vm.scn, time: vm.time, deployed: vm.deployed, done: vm.done, total: vm.total, outcome: vm.outcome, units: vm.units.map((u) => ({ id: u.id, label: u.label, battery: u.battery })), people: vm.people, alarms: vm.alarms.slice(-3), pending: vm.pending.map((a) => ({ role: a.role, reason: a.reason })) });
-  $('vBrief').innerHTML = `${esc(r.text)} <span class="note">(${r.mode === 'llm' ? 'written by the AI assistant, advisory only' : 'standard summary, no AI model connected'})</span>`;
+  $('vBrief').innerHTML = `${esc(r.text)} <span class="note">(${r.mode === 'llm' ? 'written by the AI assistant, advisory only' : 'standard summary, AI not used: ' + esc(r.why ?? 'no AI model connected')})</span>`;
 };
 $('btnPing').onclick = () => { if (mode !== 'remote') { $('vReply').textContent = 'Link test: not paired with a laptop (this page is running its own simulation).'; return; } pingAt = Date.now(); link.send({ t: 'ping', n: pingAt }); $('vReply').textContent = 'Link test: sent, waiting...'; setTimeout(() => { if (pingAt && $('vReply').textContent.endsWith('waiting...')) $('vReply').textContent = 'Link test: NO ANSWER from the laptop. The link is not working.'; }, 3500); };
 for (const id of ['inScn', 'inCount', 'inAnimals', 'inRobots', 'inWeight', 'inSeed', 'chkAuto']) $(id).onchange = () => { if (id === 'inScn') $('inSeed').value = SEEDS[$('inScn').value]; restartLocal(); };
