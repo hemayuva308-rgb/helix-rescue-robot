@@ -8,10 +8,10 @@ A rescue unit in simulation finds, verifies and carries a casualty (up to about 
 
 Simplifications: the fire scenario is a single floor plan with six rooms and two exits (the planning documents mention three floors); sensors, heat, smoke and current are toy models; the unit has global knowledge of temperature (as from a building fire-alarm system).
 
-## Robot concept
-![Helix rescue robot concept](docs/robot_humanoid_concept.png)
+## Robot vision
+![Helix rescue robot vision](docs/robot_humanoid_concept.png)
 
-A concept illustration of the rescue robot the decision layer is designed for: human height (about 5 ft), a human-shaped upper body with arms that carry the casualty, sensors in the head and chest, and a tracked base with outriggers that deploy during a lift (casualty up to about 90 kg). It is not a CAD model; all dimensions are first-pass design assumptions. A walking biped version is future work.
+The long-term vision the decision layer is built for: a human-shaped, human-height (about 5 ft) rescue robot with arms and legs that walks at human pace and carries a casualty of up to about 90 kg in its arms, with sensors in the head and chest. It is a concept illustration, not a CAD model, and not something built or tested yet. What exists today is the decision layer, proven in simulation.
 
 ## Run it
 

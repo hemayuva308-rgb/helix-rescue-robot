@@ -1,90 +1,87 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 820" role="img" aria-label="Helix human-height rescue robot concept carrying a casualty in its arms">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 820" role="img" aria-label="Helix human-shaped rescue robot concept walking while carrying a casualty in its arms">
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8AA0B6"/></marker>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0E1722"/><stop offset="1" stop-color="#0B1118"/></linearGradient>
     <linearGradient id="body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1B2D42"/><stop offset="1" stop-color="#26405C"/></linearGradient>
   </defs>
   <rect width="1280" height="820" fill="url(#bg)"/>
-  <text x="700" y="52" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#E6EEF7">Helix rescue robot: concept</text>
-  <text x="700" y="84" font-family="Arial, sans-serif" font-size="20" fill="#8AA0B6">Human-height, human-shaped upper body on a tracked base.</text>
+  <text x="700" y="52" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#E6EEF7">Helix rescue robot: vision</text>
+  <text x="700" y="84" font-family="Arial, sans-serif" font-size="20" fill="#8AA0B6">Human-shaped, human-height, walks and carries.</text>
   <text x="700" y="110" font-family="Arial, sans-serif" font-size="20" fill="#8AA0B6">Concept illustration, not a CAD model.</text>
-
   <line x1="48" y1="740" x2="1232" y2="740" stroke="#223244" stroke-width="3"/>
 
-  <!-- outriggers (deployed during a lift) -->
-  <g stroke="#FFB454" stroke-width="8" stroke-linecap="round" stroke-dasharray="2 14">
-    <line x1="500" y1="610" x2="300" y2="736"/>
-    <line x1="640" y1="610" x2="850" y2="736"/>
-  </g>
-  <rect x="270" y="732" width="60" height="10" rx="4" fill="#FFB454"/>
-  <rect x="820" y="732" width="60" height="10" rx="4" fill="#FFB454"/>
+  <!-- back leg -->
+  <line x1="545" y1="425" x2="500" y2="565" stroke="#3A4A5A" stroke-width="40" stroke-linecap="round"/>
+  <line x1="500" y1="565" x2="450" y2="705" stroke="#3A4A5A" stroke-width="32" stroke-linecap="round"/>
+  <path d="M440 712 L488 700 L492 728 L426 732 Z" fill="#3A4A5A" stroke="#5D6D7E" stroke-width="2"/>
+  <circle cx="500" cy="565" r="15" fill="#6B5A2E"/>
 
-  <!-- tracks -->
-  <rect x="340" y="640" width="440" height="100" rx="46" fill="#1B2733" stroke="#5D6D7E" stroke-width="3"/>
-  <circle cx="386" cy="690" r="30" fill="none" stroke="#5D6D7E" stroke-width="3"/>
-  <circle cx="734" cy="690" r="30" fill="none" stroke="#5D6D7E" stroke-width="3"/>
-  <circle cx="480" cy="708" r="13" fill="none" stroke="#3A4A5A" stroke-width="2"/>
-  <circle cx="560" cy="708" r="13" fill="none" stroke="#3A4A5A" stroke-width="2"/>
-  <circle cx="640" cy="708" r="13" fill="none" stroke="#3A4A5A" stroke-width="2"/>
-
-  <!-- waist column -->
-  <rect x="490" y="400" width="140" height="244" rx="14" fill="url(#body)" stroke="#35D0E6" stroke-width="3"/>
-  <rect x="506" y="560" width="108" height="64" rx="8" fill="#12533A" stroke="#4CD694" stroke-width="2"/>
-  <text x="560" y="598" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#E6EEF7">battery</text>
-
-  <!-- back pack -->
-  <rect x="446" y="186" width="30" height="170" rx="8" fill="#2A2412" stroke="#FFB454" stroke-width="2"/>
+  <!-- backpack -->
+  <rect x="468" y="238" width="30" height="150" rx="8" fill="#2A2412" stroke="#FFB454" stroke-width="2"/>
 
   <!-- torso -->
-  <rect x="470" y="160" width="180" height="244" rx="26" fill="url(#body)" stroke="#35D0E6" stroke-width="3"/>
-  <rect x="606" y="196" width="30" height="90" rx="8" fill="#0B1118" stroke="#4CD694" stroke-width="3"/>
-  <line x1="612" y1="214" x2="630" y2="214" stroke="#4CD694" stroke-width="3"/>
-  <line x1="612" y1="232" x2="630" y2="232" stroke="#4CD694" stroke-width="3"/>
-  <line x1="612" y1="250" x2="630" y2="250" stroke="#4CD694" stroke-width="3"/>
-  <text x="560" y="350" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#E6EEF7">HELIX</text>
+  <rect x="500" y="226" width="124" height="204" rx="26" fill="url(#body)" stroke="#35D0E6" stroke-width="3"/>
+  <rect x="596" y="256" width="26" height="80" rx="8" fill="#0B1118" stroke="#4CD694" stroke-width="3"/>
+  <line x1="601" y1="272" x2="617" y2="272" stroke="#4CD694" stroke-width="3"/>
+  <line x1="601" y1="290" x2="617" y2="290" stroke="#4CD694" stroke-width="3"/>
+  <line x1="601" y1="308" x2="617" y2="308" stroke="#4CD694" stroke-width="3"/>
+  <text x="552" y="392" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#E6EEF7">HELIX</text>
 
   <!-- neck + head -->
-  <rect x="545" y="138" width="30" height="26" rx="6" fill="#26405C" stroke="#8AA0B6" stroke-width="2"/>
-  <circle cx="560" cy="104" r="44" fill="url(#body)" stroke="#35D0E6" stroke-width="3"/>
-  <rect x="566" y="90" width="46" height="26" rx="12" fill="#0B1118" stroke="#FFB454" stroke-width="3"/>
-  <circle cx="590" cy="103" r="7" fill="#FFB454"/>
+  <rect x="546" y="204" width="28" height="26" rx="6" fill="#26405C" stroke="#8AA0B6" stroke-width="2"/>
+  <circle cx="560" cy="170" r="38" fill="url(#body)" stroke="#35D0E6" stroke-width="3"/>
+  <rect x="566" y="157" width="40" height="24" rx="11" fill="#0B1118" stroke="#FFB454" stroke-width="3"/>
+  <circle cx="588" cy="169" r="6" fill="#FFB454"/>
 
-  <!-- far arm (behind) -->
-  <line x1="628" y1="210" x2="706" y2="282" stroke="#3A4A5A" stroke-width="22" stroke-linecap="round"/>
-  <line x1="706" y1="282" x2="900" y2="282" stroke="#3A4A5A" stroke-width="20" stroke-linecap="round"/>
+  <!-- front leg -->
+  <line x1="580" y1="425" x2="622" y2="565" stroke="#8AA0B6" stroke-width="42" stroke-linecap="round"/>
+  <line x1="622" y1="565" x2="668" y2="705" stroke="#8AA0B6" stroke-width="34" stroke-linecap="round"/>
+  <path d="M652 702 L718 706 L722 732 L660 734 Z" fill="#8AA0B6" stroke="#E6EEF7" stroke-width="2"/>
+  <circle cx="622" cy="565" r="16" fill="#FFB454"/>
+  <circle cx="580" cy="425" r="17" fill="#FFB454"/>
+
+  <!-- far arm -->
+  <line x1="606" y1="262" x2="676" y2="330" stroke="#3A4A5A" stroke-width="22" stroke-linecap="round"/>
+  <line x1="676" y1="330" x2="880" y2="330" stroke="#3A4A5A" stroke-width="20" stroke-linecap="round"/>
 
   <!-- casualty -->
-  <rect x="690" y="228" width="340" height="40" rx="20" fill="#7A3552" stroke="#FF5FA2" stroke-width="3"/>
-  <circle cx="1050" cy="248" r="24" fill="#7A3552" stroke="#FF5FA2" stroke-width="3"/>
-  <rect x="690" y="222" width="340" height="14" rx="7" fill="#2E6B8A" opacity="0.85"/>
+  <rect x="660" y="278" width="330" height="40" rx="20" fill="#7A3552" stroke="#FF5FA2" stroke-width="3"/>
+  <circle cx="1010" cy="298" r="24" fill="#7A3552" stroke="#FF5FA2" stroke-width="3"/>
+  <rect x="660" y="272" width="330" height="14" rx="7" fill="#2E6B8A" opacity="0.85"/>
 
   <!-- near arm -->
-  <line x1="640" y1="204" x2="722" y2="276" stroke="#8AA0B6" stroke-width="26" stroke-linecap="round"/>
-  <line x1="722" y1="276" x2="930" y2="276" stroke="#8AA0B6" stroke-width="22" stroke-linecap="round"/>
-  <circle cx="640" cy="204" r="18" fill="#FFB454"/>
-  <circle cx="722" cy="276" r="15" fill="#FFB454"/>
-  <circle cx="930" cy="276" r="12" fill="#E6EEF7"/>
+  <line x1="618" y1="258" x2="690" y2="326" stroke="#8AA0B6" stroke-width="26" stroke-linecap="round"/>
+  <line x1="690" y1="326" x2="900" y2="326" stroke="#8AA0B6" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="618" cy="258" r="18" fill="#FFB454"/>
+  <circle cx="690" cy="326" r="15" fill="#FFB454"/>
+  <circle cx="900" cy="326" r="12" fill="#E6EEF7"/>
 
-  <!-- dimension: height -->
-  <line x1="236" y1="60" x2="236" y2="740" stroke="#8AA0B6" stroke-width="2" marker-start="url(#a)" marker-end="url(#a)"/>
-  <text x="222" y="410" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#E6EEF7" transform="rotate(-90 222 410)">about 1.5 m (5 ft), human height</text>
+  <!-- motion cue -->
+  <g stroke="#35D0E6" stroke-width="4" stroke-linecap="round" opacity="0.6">
+    <line x1="330" y1="610" x2="380" y2="610"/><line x1="300" y1="650" x2="370" y2="650"/><line x1="340" y1="690" x2="400" y2="690"/>
+  </g>
+
+  <!-- height dimension -->
+  <line x1="236" y1="138" x2="236" y2="740" stroke="#8AA0B6" stroke-width="2" marker-start="url(#a)" marker-end="url(#a)"/>
+  <text x="222" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#E6EEF7" transform="rotate(-90 222 440)">about 1.5 m (5 ft), human height</text>
 
   <!-- callouts -->
   <g font-family="Arial, sans-serif" font-size="20" fill="#E6EEF7">
-    <line x1="520" y1="82" x2="400" y2="60" stroke="#8AA0B6"/><text x="270" y="58">Thermal camera, mic array</text>
-    <line x1="630" y1="262" x2="700" y2="384" stroke="#8AA0B6"/><text x="706" y="392">Radar and CO₂ sensing on the chest</text>
-    <line x1="900" y1="288" x2="940" y2="326" stroke="#8AA0B6"/><text x="946" y="332">Arms with torque limits</text><text x="946" y="358">and load sensing</text>
-    <line x1="450" y1="330" x2="400" y2="402" stroke="#8AA0B6"/><text x="252" y="418">Back-mounted power</text>
-    <line x1="850" y1="736" x2="930" y2="700" stroke="#8AA0B6"/><text x="936" y="704">Outriggers deploy during a lift</text>
-    <line x1="780" y1="690" x2="930" y2="650" stroke="#8AA0B6"/><text x="936" y="654">Tracked base for stability</text>
+    <line x1="520" y1="150" x2="400" y2="130" stroke="#8AA0B6"/><text x="270" y="128">Thermal camera, mic array</text>
+    <line x1="624" y1="300" x2="700" y2="448" stroke="#8AA0B6"/><text x="706" y="456">Radar and CO₂ sensing on the chest</text>
+    <line x1="880" y1="334" x2="930" y2="372" stroke="#8AA0B6"/><text x="936" y="378">Arms with torque limits</text><text x="936" y="404">and load sensing</text>
+    <line x1="470" y1="330" x2="410" y2="390" stroke="#8AA0B6"/><text x="252" y="406">Back-mounted power</text>
+    <line x1="650" y1="600" x2="716" y2="606" stroke="#8AA0B6"/><text x="722" y="606">Legs for walking</text><text x="722" y="632">at human pace</text>
   </g>
 
-  <!-- spec panel -->
-  <rect x="930" y="470" width="302" height="150" rx="16" fill="#121B26" stroke="#223244" stroke-width="2"/>
+  <!-- design targets -->
+  <rect x="900" y="480" width="332" height="190" rx="16" fill="#121B26" stroke="#223244" stroke-width="2"/>
   <g font-family="Arial, sans-serif" fill="#E6EEF7">
-    <text x="952" y="506" font-size="22" font-weight="700" fill="#35D0E6">Design targets</text>
-    <text x="952" y="538" font-size="19">Payload 100 kg, casualty to ~90 kg</text>
-    <text x="952" y="566" font-size="19">Carries the casualty in its arms</text>
-    <text x="952" y="594" font-size="19" fill="#8AA0B6">Walking biped version: future work</text>
+    <text x="922" y="516" font-size="22" font-weight="700" fill="#35D0E6">Design targets</text>
+    <text x="922" y="548" font-size="19">Walk at human pace (about 5 km/h)</text>
+    <text x="922" y="576" font-size="19">Carry a casualty up to ~90 kg</text>
+    <text x="922" y="604" font-size="19">Human height and reach</text>
+    <text x="922" y="640" font-size="18" fill="#8AA0B6">A long-term vision. Today: the decision</text>
+    <text x="922" y="662" font-size="18" fill="#8AA0B6">layer, proven in simulation.</text>
   </g>
 </svg>
