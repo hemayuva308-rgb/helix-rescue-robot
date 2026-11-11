@@ -99,12 +99,9 @@ function draw() {
   }
   for (const c of sim.casualties) if (sim.multi && c.alive && !c.delivered && (truth || c.verifiedOnce)) { g.fillStyle = '#fff'; g.font = 'bold 10px system-ui'; g.fillText(`${c.id}${c.verifiedOnce ? ' health ' + Math.round(c.health) : ''}`, Math.round(c.fx) * CELL - 6, Math.round(c.fy) * CELL + CELL + 11); }
   for (const c of sim.casualties) if (c.delivered) { g.fillStyle = '#4cd694'; g.beginPath(); g.arc(Math.round(c.fx) * CELL + CELL / 2, Math.round(c.fy) * CELL + CELL / 2, 7, 0, 7); g.fill(); }
-  // robot
+  // robot (humanoid, seen from above: head, shoulders, arms; swims when the water is deep)
   const rx = r.x * CELL + CELL / 2, ry = r.y * CELL + CELL / 2;
-  g.fillStyle = r.busy > 0 ? '#ffb454' : '#35d0e6'; g.beginPath(); g.roundRect(rx - 9, ry - 9, 18, 18, 5); g.fill();
-  g.fillStyle = '#06222a'; g.font = 'bold 10px system-ui'; g.fillText('H', rx - 3.5, ry + 3.5);
-  if (r.carrying) { g.strokeStyle = '#ff5fa2'; g.lineWidth = 3; g.beginPath(); g.arc(rx, ry, 13, 0, 7); g.stroke(); g.lineWidth = 1; }
-  if (r.busy > 0) { g.fillStyle = '#fff'; g.font = '10px system-ui'; g.fillText(`${r.busyAction} ${r.busy}s`, rx + 12, ry - 10); }
+  drawRobot(g, r, rx, ry);
   effects(g, r, rx, ry);
   // legend
   $('legend').innerHTML = [['#35d0e6', 'Helix unit'], ['#ff5fa2', 'verified casualty'], ['#ffb454', 'unverified detection'], ['#4cd694', 'verified / delivered'], ['#ff7a28', sim.scenario === 'fire' ? 'fire & heat' : sim.scenario === 'water' ? 'current (lines)' : 'debris (red slash = too heavy)']].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
@@ -153,9 +150,62 @@ function effects(g, r, rx, ry) {
   }
 }
 
+
+// ---------------------------------------------------------------- robot figure + ratings
+const RATING = { wadeM: 1.0, swimM: 2.5 }; // design assumptions: wades up to waist depth, swims (buoyancy + propulsion module) deeper, depth limit 2.5 m
+let heading = 0, lastPos = null;
+function robotMode() {
+  const d = sim.depthAt(sim.robot.x, sim.robot.y);
+  return d > RATING.wadeM ? 'swimming' : d > 0.15 ? 'wading' : 'walking';
+}
+function drawRobot(g, r, rx, ry) {
+  const now = performance.now() / 1000, mode = robotMode(), temp = sim.tempAt(r.x, r.y);
+  if (lastPos && (lastPos.x !== r.x || lastPos.y !== r.y)) heading = Math.atan2(r.y - lastPos.y, r.x - lastPos.x);
+  lastPos = { x: r.x, y: r.y };
+  if (temp > 60) { const a = Math.min(0.45, (temp - 60) / 400) * (0.8 + 0.2 * Math.sin(now * 8)); g.fillStyle = `rgba(255,110,30,${a})`; g.beginPath(); g.arc(rx, ry, 30, 0, 7); g.fill(); }
+  g.save(); g.translate(rx, ry); g.scale(1.7, 1.7); g.rotate(heading);
+  const sw = mode === 'swimming', stroke = sw ? Math.sin(now * 5) : 0;
+  if (sw) { // ripples + wake
+    for (const k of [0, 0.5]) { const ph = (now * 0.9 + k) % 1; g.strokeStyle = `rgba(190,230,255,${0.6 * (1 - ph)})`; g.lineWidth = 1.5; g.beginPath(); g.ellipse(0, 0, 12 + ph * 14, 9 + ph * 11, 0, 0, 7); g.stroke(); }
+    g.strokeStyle = 'rgba(190,230,255,0.35)'; g.beginPath(); g.moveTo(-10, -4); g.lineTo(-26, -9); g.moveTo(-10, 4); g.lineTo(-26, 9); g.stroke();
+  }
+  // cradle-carried casualty (mannequin): body across the arms, head to the robot's left
+  if (r.carrying) {
+    const c = r.carrying;
+    g.fillStyle = c.covered ? '#7f93a8' : '#e98a3c'; g.beginPath(); g.roundRect(5, -17, 11, 34, 5); g.fill();
+    g.fillStyle = '#e0bc9f'; g.beginPath(); g.arc(10, -20, 4.5, 0, 7); g.fill();
+    g.fillStyle = '#273449'; g.beginPath(); g.roundRect(7, 12, 7, 12, 3); g.fill();
+  }
+  // arms
+  g.strokeStyle = '#2a6fb0'; g.lineWidth = 4; g.lineCap = 'round';
+  const reach = r.carrying ? 15 : sw ? 12 + 6 * stroke : 6 + 2 * Math.sin(now * 4);
+  g.beginPath(); g.moveTo(0, -9); g.lineTo(reach, -10 + (sw ? 3 * stroke : 0)); g.moveTo(0, 9); g.lineTo(reach, 10 - (sw ? 3 * stroke : 0)); g.stroke();
+  // shoulders / torso
+  g.fillStyle = r.busy > 0 ? '#d99a3a' : '#3b82c4'; g.beginPath(); g.ellipse(-1, 0, 6.5, 11.5, 0, 0, 7); g.fill();
+  g.strokeStyle = '#9fd3ff'; g.lineWidth = 1; g.stroke();
+  // head with visor
+  g.fillStyle = '#cfe3f5'; g.beginPath(); g.arc(1, 0, 6, 0, 7); g.fill();
+  g.fillStyle = '#12c4e0'; g.beginPath(); g.ellipse(4, 0, 2.6, 4.4, 0, 0, 7); g.fill();
+  g.restore();
+  if (sw) { g.fillStyle = 'rgba(30,100,170,0.38)'; g.beginPath(); g.arc(rx, ry, 22, 0, 7); g.fill(); } // body under the surface: only head, shoulders and arm strokes show
+  g.fillStyle = '#fff'; g.font = '10px system-ui';
+  const tag = r.busy > 0 ? `${r.busyAction} ${r.busy}s` : sw ? (r.carrying ? 'swimming, towing' : 'swimming') : mode === 'wading' ? 'wading' : r.carrying ? 'carrying' : '';
+  if (tag) g.fillText(tag, rx + 24, ry - 22);
+}
+
+function ratings() {
+  const r = sim.robot, p = sim.params, temp = sim.tempAt(r.x, r.y), depth = sim.depthAt(r.x, r.y), cur = sim.currentMagAt(r.x, r.y);
+  const lim = r.carrying ? p.carryTempLimit : p.robotTempLimit, mode = robotMode();
+  const row = (label, val, max, unit, note) => `<div class="row"><span>${label}</span><span>${val.toFixed(1)} ${unit} <small>/ limit ${max}</small></span></div><div class="bar sm"><div style="width:${Math.min(100, val / max * 100)}%;background:${val / max > 0.8 ? '#ff6b6b' : '#35d0e6'}"></div></div>${note ? `<p class="hint">${note}</p>` : ''}`;
+  $('ratings').innerHTML = `<div class="row"><span>Mode</span><b>${r.carrying ? mode + ', carrying' : mode}</b></div>` +
+    row('Heat at the unit', temp, lim, '°C', r.carrying ? 'Carrying: the casualty must stay below 70 °C, so the limit is lower. Empty: 150 °C.' : 'Empty-handed limit 150 °C; it drops to 70 °C once it carries someone.') +
+    (sim.scenario === 'water' ? row('Water depth', depth, p.depthLimit, 'm', `Wades to ${RATING.wadeM} m, swims deeper with its buoyancy and propulsion module, refuses over ${p.depthLimit} m.`) + row('Current', cur, p.currentLimit, 'm/s', 'Refuses water flowing faster than the limit.') : '');
+}
+
 // ---------------------------------------------------------------- panels
 const fmt = (n, d = 1) => Number(n).toFixed(d);
 function panels() {
+  ratings();
   const m = sim.mission, r = sim.robot, p = sim.params;
   $('stState').textContent = m.state.replace('_', ' ');
   $('stTime').textContent = `${sim.t}s`;

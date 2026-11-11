@@ -50,3 +50,4 @@ select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);bo
 .chip.allow{background:#12533a}.chip.block{background:#5a2323}.chip.appr{background:#5a4a12}
 footer{padding:10px 20px 24px;color:var(--mute);font-size:12px}
 @media (max-width:980px){main{grid-template-columns:1fr}.tabs{margin-left:0}}
+.bar.sm{height:7px;margin:3px 0 6px}.bar.sm>div{height:100%}

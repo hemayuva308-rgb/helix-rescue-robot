@@ -47,6 +47,9 @@ With People set to 2 to 4, the unit does not stop after one rescue. It delivers 
 ### The safety gate (`src/gate.js`)
 Allow-list of actions; solo lift refused above 90 kg (checked on the estimate **and** again on the load sensor after the lift); temperature, depth, current and structural-risk limits; spinal injury needs medic approval; casualty must be covered before being carried; flotation before towing; harvesting only with sealed generators, never with a casualty aboard or near, never in still water, with a ground-fault style cutoff; approvals have a timer and an unresponsive commander makes the unit hold and escalate, never act alone.
 
+### Heat, water and swimming (design assumptions)
+The dashboard shows a live **Robot ratings** card. Assumed limits: 150 °C when empty-handed, 70 °C while carrying (the casualty must stay below 70 °C); in water it wades up to 1 m, swims deeper with a buoyancy and propulsion module, and refuses water deeper than 2.5 m or flowing faster than 2 m/s. These are placeholders to be replaced by tested values; the unit is drawn as a humanoid (head, shoulders, arms) that visibly swims and carries the casualty.
+
 ### Energy
 Harvest is a **range extender**, not a power source. Water harvest works only in moving water (a robot cannot gain energy from its own motion). Heat harvest is weak and rarely usable in the fire scenario: the evaluation shows that. All rates are assumptions in `src/scenarios.js`.
 
