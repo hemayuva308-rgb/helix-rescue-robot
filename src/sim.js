@@ -488,6 +488,7 @@ export class Simulation {
   missionStep() {
     const m = this.mission, r = this.robot;
     if (this.outcome) return;
+    if (this.multi && !m.casualty && ['APPROACH', 'AWAIT_APPROVAL', 'PREP', 'PREP_BUSY', 'CARRY', 'HARVEST'].includes(m.state)) { this.resetMission(); return; }
     switch (m.state) {
       case 'SEARCH': return this.doSearch();
       case 'INVESTIGATE': return this.doInvestigate();
@@ -740,6 +741,7 @@ export class Simulation {
       return;
     }
     this.startAction('load', () => {
+      if (this.multi && (this.mission.casualty !== c || !c.alive || c.lost || c.referred)) return; // the casualty was lost or referred while loading
       if (this.multi && this.gateOn && this.tempAt(r.x, r.y) > this.params.carryTempLimit * 0.9) { this.skipCasualty(c, `the spot is now ${this.tempAt(r.x, r.y).toFixed(0)}C, too hot to lift safely (carry limit ${this.params.carryTempLimit}C): fire crew requested`); return; }
       c.aboard = true; r.carrying = c; c.x = r.x; c.y = r.y; c.fx = r.x; c.fy = r.y;
       if (c.spinal && !this.approvals.has('medic:' + c.id)) this.violations.spinalMoved++;
