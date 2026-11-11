@@ -4,6 +4,7 @@
 // Everything about the winch, the sling and the "secure" step is a DESIGN ASSUMPTION: none of it is built.
 import { AuditLog } from './audit.js';
 import { makeRng, clamp } from './util.js';
+import { parseCommand, REPLIES } from './command.js';
 
 export const WELL_PARAMS = {
   ropeRatingM: 30,        // winch rope length rating
@@ -54,7 +55,7 @@ export class WellSimulation {
     this.startBattery = this.robot.battery;
     this.mission = { state: 'WALK', note: '', energyNeeded: null, hits: {}, verified: false, secureTries: 0, mode: null };
     this.sc = { label: 'Well rescue' };
-    this.linkUp = true;
+    this.linkUp = true; this.recall = false; this.holdCmd = false;
     this.emit('System', 'info', `Scenario "Well rescue" started (seed ${opts.seed ?? 1}, gate ${this.gateOn ? 'ON' : 'OFF'}). Simulation only; the winch, sling and securing step are design assumptions, not built hardware.`);
   }
 
@@ -164,6 +165,35 @@ export class WellSimulation {
   }
   finish(result, reason) { if (this.outcome) return; this.outcome = { result, reason, t: this.t }; this.emit('System', result === 'delivered' ? 'ok' : 'crit', `OUTCOME: ${result} (${reason})`); }
   setState(s) { this.mission.state = s; }
+  // Operator voice or typed command (fixed grammar, src/command.js).
+  command(text, source = 'voice') {
+    const p = parseCommand(text);
+    if (!this.linkUp) { this.emit('Operator', 'warn', `Command "${p.text}" not delivered: the operator link is down.`); return { ok: false, intent: p.intent, reply: REPLIES.nolink }; }
+    this.emit('Operator', 'info', `${source} command heard: "${p.text}" -> ${p.intent.toUpperCase()}`, { intent: p.intent });
+    if (p.intent === 'unknown') { this.emit('Operator', 'warn', 'Command not understood and ignored (accepted: come out, hold, resume, deploy).'); return { ok: false, intent: 'unknown', reply: REPLIES.unknown }; }
+    if (p.intent === 'recall') {
+      if (!this.recall) {
+        this.recall = true; this.holdCmd = false;
+        this.emit('System', 'warn', this.casualty.secured ? 'RECALL: the casualty is already on the rope, so the unit finishes bringing them up and out, then stops.' : 'RECALL: operator ordered the unit out. Rope is retracted, the pod is brought back up, then the unit walks out to the safe zone.');
+      }
+    } else if (p.intent === 'hold') { this.holdCmd = true; this.emit('System', 'warn', 'HOLD: the unit finishes the action in progress, then holds. A casualty already on the rope keeps being brought up.'); }
+    else if (p.intent === 'resume') { this.holdCmd = false; if (this.recall && this.mission.state !== 'DONE') { this.recall = false; if (['RETRACT', 'RETURN'].includes(this.mission.state)) this.setState('ANCHOR'); } this.emit('System', 'ok', 'Resume: the unit continues.'); }
+    return { ok: true, intent: p.intent, reply: REPLIES[p.intent] };
+  }
+
+  doRetract() {
+    const r = this.robot;
+    r.ropeOutM = Math.max(0, r.ropeOutM - this.params.lowerSpeed);
+    if (r.ropeOutM <= 0) { r.inShaft = false; this.emit('Operator', 'ok', 'Rope and pod are back at the rim.'); this.setState('RETURN'); }
+  }
+
+  doReturn() {
+    const r = this.robot, p = this.params;
+    r.fan = false;
+    r.x = Math.max(p.safeX, r.x - 1);
+    if (r.x <= p.safeX) { this.escalate('Recalled by the operator: casualty C1 was not rescued, a rope rescue or diving team is needed', 'escalated_recalled'); }
+  }
+
   setLink(up) {
     if (up === this.linkUp) return;
     this.linkUp = up;
@@ -192,7 +222,7 @@ export class WellSimulation {
     if (r.battery <= 0 && !this.outcome) { r.battery = 0; this.escalate('Battery exhausted: human team requested'); }
     this.processApprovals();
     if (r.busy > 0) { r.busy--; if (r.busy === 0) { const fn = r.onDone; r.onDone = null; r.busyAction = null; fn?.(); } }
-    else if (this.linkUp || ['HOIST', 'CARRY', 'HOLD_ESCALATED', 'DONE'].includes(this.mission.state)) this.missionStep();
+    else if ((this.linkUp && !this.holdCmd) || ['HOIST', 'CARRY', 'RETRACT', 'RETURN', 'HOLD_ESCALATED', 'DONE'].includes(this.mission.state)) this.missionStep();
     this.invariants();
   }
 
@@ -209,7 +239,12 @@ export class WellSimulation {
   }
 
   missionStep() {
+    if (this.recall && !this.casualty.secured && !['RETRACT', 'RETURN', 'HOLD_ESCALATED', 'DONE', 'HOIST', 'CARRY'].includes(this.mission.state)) {
+      this.setState(this.robot.ropeOutM > 0 ? 'RETRACT' : 'RETURN');
+    }
     switch (this.mission.state) {
+      case 'RETRACT': return this.doRetract();
+      case 'RETURN': return this.doReturn();
       case 'WALK': return this.doWalk();
       case 'DETECT': return this.doDetect();
       case 'MEASURE': return this.doMeasure();

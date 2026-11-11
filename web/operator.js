@@ -11,6 +11,7 @@ const SEEDS = { fire: 4, water: 5, collapse: 4, well: 3 };
 const UCOL = { A: '#3b82c4', B: '#8b5cf6', C: '#d97706' };
 const WORDS = { SEARCH: 'searching', INVESTIGATE: 'checking a detection', ASSESS: 'assessing a casualty', HARVEST: 'charging from the environment', APPROACH: 'going to the casualty', AWAIT_APPROVAL: 'waiting for approval', PREP: 'preparing the lift', PREP_BUSY: 'preparing the lift', CARRY: 'carrying out', DONE: 'task complete', HOLD_ESCALATED: 'holding: help requested', ASSIST: 'helping another unit', WALK: 'walking to the well', DETECT: 'scanning the shaft', MEASURE: 'measuring depth and air', LOWER: 'lowering the sling', DESCEND: 'sending the pod down', GRAB: 'pod holding the casualty', SECURE: 'securing the casualty', HOIST: 'hoisting' };
 
+const WORDS2 = { RETURN: 'coming out to the safe zone', RETURNED: 'out, in the safe zone', RETRACT: 'pulling the rope and pod back' }; Object.assign(WORDS, WORDS2);
 let sim = null, deployed = false, held = false, speed = 5, acc = 0, last = 0, alarmSeen = 0, logN = 0;
 
 function scn() { return $('inScn').value; }
@@ -56,7 +57,7 @@ function map() {
 function render() {
   const units = unitsOf();
   const total = scn() === 'well' ? 1 : sim.casualties.length, done = scn() === 'well' ? (sim.casualty.delivered ? 1 : 0) : sim.casualties.filter((c) => c.delivered).length;
-  $('oState').textContent = !deployed ? 'STANDBY' : sim.linkUp === false ? 'LINK LOST' : held ? 'ON HOLD' : sim.outcome ? 'FINISHED' : 'ACTIVE';
+  $('oState').textContent = !deployed ? 'STANDBY' : sim.linkUp === false ? 'LINK LOST' : sim.recall && !sim.outcome ? 'COMING OUT' : sim.holdCmd || held ? 'ON HOLD' : sim.outcome ? 'FINISHED' : 'ACTIVE';
   $('oTime').textContent = `${sim.t}s`; $('oRescued').textContent = `${done} / ${total}`;
   $('oOutcome').textContent = sim.outcome ? sim.outcome.result.replace('_', ' ') : '-';
   // alarm banner + sound (the alarm lives on the operator's screen)
@@ -107,3 +108,33 @@ $('inSpeed').onchange = () => { speed = Number($('inSpeed').value); };
 if (q.get('scenario')) { $('inScn').value = q.get('scenario'); $('inSeed').value = SEEDS[scn()] ?? 1; }
 if (q.get('seed')) $('inSeed').value = q.get('seed'); if (q.get('speed')) $('inSpeed').value = q.get('speed'); if (q.get('weight')) $('inWeight').value = q.get('weight'); if (q.get('robots')) $('inRobots').value = q.get('robots'); if (q.get('count')) $('inCount').value = q.get('count');
 restart(); requestAnimationFrame(frame);
+
+// ---------------------------------------------------------------- voice and typed commands
+function speak(text) {
+  if (!$('chkSpeak').checked || !('speechSynthesis' in window)) return;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = 1; speechSynthesis.speak(u); } catch (e) { /* no voice available */ }
+}
+function sendCommand(text, source) {
+  if (!text.trim()) return;
+  $('vHeard').textContent = `Heard: "${text}"`;
+  let res = sim.command(text, source);
+  if (res.intent === 'deploy' && res.ok && !deployed) $('btnDeploy').click();
+  $('vReply').textContent = `Unit reply: ${res.reply}`; speak(res.reply);
+}
+$('btnSend').onclick = () => { sendCommand($('inCmd').value, 'typed'); $('inCmd').value = ''; };
+$('inCmd').onkeydown = (e) => { if (e.key === 'Enter') $('btnSend').click(); };
+for (const b of document.querySelectorAll('button.q')) b.onclick = () => sendCommand(b.dataset.c, 'button');
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) { $('btnMic').disabled = true; $('btnMic').textContent = 'Microphone not supported here (use Chrome or Edge)'; }
+else {
+  let rec = null;
+  $('btnMic').onclick = () => {
+    if (rec) { rec.stop(); return; }
+    rec = new SR(); rec.lang = 'en-US'; rec.interimResults = true; rec.maxAlternatives = 1;
+    $('btnMic').textContent = '\u{1F3A4} Listening... (click to stop)';
+    rec.onresult = (e) => { const r = e.results[e.results.length - 1]; $('vHeard').textContent = `Heard: "${r[0].transcript}"${r.isFinal ? '' : ' ...'}`; if (r.isFinal) sendCommand(r[0].transcript, 'voice'); };
+    rec.onerror = (e) => { $('vReply').textContent = `Unit reply: microphone problem (${e.error}). You can type the command instead.`; };
+    rec.onend = () => { rec = null; $('btnMic').textContent = '\u{1F3A4} Speak'; };
+    try { rec.start(); } catch (e) { rec = null; }
+  };
+}

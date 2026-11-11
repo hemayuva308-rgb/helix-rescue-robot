@@ -3,6 +3,7 @@
 import { makeRng, clamp, dist, key, astar } from './util.js';
 import { buildScenario, T, SENSOR_TYPES } from './scenarios.js';
 import { gate } from './gate.js';
+import { parseCommand, REPLIES } from './command.js';
 import { AuditLog } from './audit.js';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -73,6 +74,7 @@ export class Simulation {
     this.fleet = this.units.length > 1;
     this.cur = this.units[0];
     this.alarms = []; this.assists = 0;
+    this.recall = false; this.holdCmd = false; // operator commands (voice or typed)
     this.linkUp = true; // operator link; if it drops, units hold (a unit already carrying keeps going to the safe zone)
 
     // fire state
@@ -226,6 +228,61 @@ export class Simulation {
     this.emit('Dispatch', 'action', `ALERT SENT to medical and fire teams: ${msg}`);
     if (this.opts.onAlert) this.opts.onAlert(msg, this);
   }
+  // Operator voice or typed command, parsed by a fixed grammar (src/command.js). Only come out / hold / resume / deploy exist.
+  command(text, source = 'voice') {
+    const p = parseCommand(text);
+    if (!this.linkUp) { this.emit('Operator', 'warn', `Command "${p.text}" not delivered: the operator link is down.`); return { ok: false, intent: p.intent, reply: REPLIES.nolink }; }
+    this.emit('Operator', 'info', `${source} command heard: "${p.text}" -> ${p.intent.toUpperCase()}`, { intent: p.intent });
+    if (p.intent === 'unknown') { this.emit('Operator', 'warn', 'Command not understood and ignored (accepted: come out, hold, resume, deploy).'); return { ok: false, intent: 'unknown', reply: REPLIES.unknown }; }
+    this.runGate({ type: p.intent === 'recall' ? 'recall' : 'hold' }, true);
+    if (p.intent === 'recall') this.startRecall();
+    else if (p.intent === 'hold') { this.holdCmd = true; this.emit('System', 'warn', 'HOLD: units finish the action in progress, then hold position. A unit carrying a casualty keeps going to the safe zone.'); }
+    else if (p.intent === 'resume') { this.holdCmd = false; if (this.recall) this.cancelRecall(); this.emit('System', 'ok', 'Resume: units continue.'); }
+    return { ok: true, intent: p.intent, reply: REPLIES[p.intent] };
+  }
+
+  startRecall() {
+    if (this.recall) return;
+    this.recall = true; this.holdCmd = false;
+    this.emit('System', 'warn', 'RECALL: operator ordered the units out. Units carrying a casualty finish carrying them to the safe zone; every other unit stops its task and walks out by the safest route.');
+    for (const u of this.units) {
+      this.useUnit(u);
+      const carrying = !!this.robot.carrying || this.mission.state === 'CARRY' || (this.mission.state === 'ASSIST' && this.mission.partner?.mission.state === 'CARRY');
+      if (!carrying && !['RETURN', 'RETURNED', 'DONE', 'HOLD_ESCALATED'].includes(this.mission.state)) this.resetMission();
+    }
+    for (const u of this.units) if (u.mission.state === 'SEARCH') u.mission.state = 'RETURN';
+    this.useUnit(this.units[0]);
+    const left = this.casualties.filter((c) => c.alive && !c.delivered && !c.lost && !c.aboard).length;
+    if (left) this.raiseAlarm('human', `Recalled by the operator: ${left} casualt${left > 1 ? 'ies are' : 'y is'} not rescued yet`, 'a human rescue team');
+  }
+
+  cancelRecall() {
+    this.recall = false;
+    for (const u of this.units) if (['RETURN', 'RETURNED'].includes(u.mission.state)) u.mission.state = 'SEARCH';
+  }
+
+  doReturn() {
+    const m = this.mission, r = this.robot;
+    if (this.isSafeZone(r.x, r.y)) { this.setState('RETURNED'); this.emit('Operator', 'ok', `Unit ${this.cur.id} is out, inside the safe zone.`); this.checkRecallDone(); return; }
+    if (!m.path.length || this.t % 3 === 0) {
+      const safeGoals = []; for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) if (this.isSafeZone(x, y) && this.passable(x, y)) safeGoals.push({ x, y });
+      const pl = this.plan({ x: r.x, y: r.y }, safeGoals, { loaded: false });
+      if (!pl) { m.noPath = (m.noPath ?? 0) + 1; if (m.noPath === 1) this.raiseAlarm('human', `Unit ${this.cur.id} has no safe way out`, 'a fire or rescue crew'); return; }
+      m.path = pl.path.slice(1);
+    }
+    this.follow();
+  }
+
+  checkRecallDone() {
+    if (!this.recall || this.outcome) return;
+    if (!this.units.every((u) => ['RETURNED', 'DONE', 'HOLD_ESCALATED'].includes(u.mission.state)) || this.units.some((u) => u.robot.carrying)) return;
+    const n = this.casualties.filter((c) => c.delivered).length, left = this.casualties.filter((c) => c.alive && !c.delivered && !c.lost).length;
+    for (const c of this.casualties) if (c.alive && !c.delivered && !c.lost) c.referred = true;
+    this.humanTeamRequested = left > 0 || this.humanTeamRequested;
+    this.setAllStates('DONE');
+    this.finish('escalated_recalled', `Recalled by the operator: ${n} delivered, ${left} not rescued: human team needed`);
+  }
+
   setLink(up) {
     if (up === this.linkUp) return;
     this.linkUp = up;
@@ -288,7 +345,7 @@ export class Simulation {
     if (mm.partner) { mm.partner.mission.state = 'SEARCH'; mm.partner.mission.partner = null; mm.partner.mission.arrived = false; mm.partner.mission.path = []; }
     for (const k of this.casualties) if (k.claimedBy === this.cur.id) k.claimedBy = null;
     Object.assign(this.mission, { path: [], target: null, casualty: null, candidate: null, energyNeeded: undefined, harvest: null, noPath: 0, harvestAttempts: 0, harvestReplans: 0, paired: false, partner: null, arrived: false, assistFail: false, waitT: 0 });
-    this.setState('SEARCH');
+    this.setState(this.recall ? 'RETURN' : 'SEARCH');
   }
 
   remaining() { return this.casualties.filter((c) => c.alive && !c.delivered && !c.lost && !c.referred); }
@@ -579,6 +636,8 @@ export class Simulation {
       case 'PREP': return this.doPrep();
       case 'CARRY': return this.doCarry();
       case 'ASSIST': return this.doAssist();
+      case 'RETURN': return this.doReturn();
+      case 'RETURNED': return;
       case 'HOLD_ESCALATED': return;
       default: return;
     }
@@ -901,7 +960,7 @@ export class Simulation {
           this.requestApproval('dispatch', c.id, 'commander', `Alert medical and fire teams: ${c.id} handed off`);
           this.resetMission();
           const left = this.remaining().length;
-          this.emit('Mission', 'ok', left ? `${this.casualties.filter((x) => x.delivered).length} delivered so far. Going back out to search for the next casualty.` : 'No casualties left to rescue.');
+          this.emit('Mission', 'ok', this.recall ? 'Casualty delivered. Recall in force: not going back in.' : left ? `${this.casualties.filter((x) => x.delivered).length} delivered so far. Going back out to search for the next casualty.` : 'No casualties left to rescue.');
           this.checkAllDone();
         } else {
           this.finish('delivered', `Casualty ${c.id} delivered to a safe zone`);
@@ -955,11 +1014,12 @@ export class Simulation {
       else {
         this.sense();
         this.updateCandidates();
-        const carryingOn = ['CARRY', 'HOLD_ESCALATED', 'DONE'].includes(this.mission.state) || (this.mission.state === 'ASSIST' && this.mission.partner?.mission.state === 'CARRY');
-        if (this.linkUp || carryingOn) this.missionStep();
+        const carryingOn = ['CARRY', 'RETURN', 'HOLD_ESCALATED', 'DONE'].includes(this.mission.state) || (this.mission.state === 'ASSIST' && this.mission.partner?.mission.state === 'CARRY');
+        if ((this.linkUp && !this.holdCmd) || carryingOn) this.missionStep();
       }
     }
     this.useUnit(this.units[0]);
+    if (this.recall) this.checkRecallDone();
     if (this.t >= MAX_T && !this.outcome) this.finish('timeout', 'Mission time limit reached');
   }
 

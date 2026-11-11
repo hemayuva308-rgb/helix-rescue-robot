@@ -42,6 +42,13 @@
     <div>State<b id="oState">STANDBY</b></div><div>Time<b id="oTime">0s</b></div><div>Rescued<b id="oRescued">0 / 0</b></div><div>Outcome<b id="oOutcome">-</b></div>
   </div>
 
+  <div class="card"><h2>Voice command <small>plain English, over the operator link</small></h2>
+    <div class="row"><button id="btnMic" class="big" style="padding:10px;font-size:15px;width:auto">&#127908; Speak</button>
+      <input id="inCmd" placeholder='say or type: "come out"' style="flex:1;min-width:120px;background:#0b1118;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px"><button id="btnSend">Send</button></div>
+    <div class="row" style="margin-top:6px"><button class="q" data-c="come out">Come out</button><button class="q" data-c="hold position">Hold</button><button class="q" data-c="resume">Resume</button></div>
+    <p class="note" id="vHeard">Heard: -</p><p class="note" id="vReply">Unit reply: -</p>
+    <label class="chk"><input type="checkbox" id="chkSpeak" checked> Unit answers out loud</label>
+    <p class="note">Only four commands exist (come out, hold, resume, deploy). Anything else, including a spoken order to lift or to drive somewhere, is ignored. The microphone needs Chrome or Edge, a click to allow it and an internet connection.</p></div>
   <div class="card"><h2>Units <small>battery and status</small></h2><div id="oUnits"></div></div>
   <div class="card"><h2>Approvals <small>needs the operator</small></h2><div id="oAppr" class="list"><p class="hint">Nothing waiting.</p></div></div>
   <div class="card"><h2>Live view <small>what the units have found</small></h2><canvas id="oMap" width="520" height="300"></canvas></div>

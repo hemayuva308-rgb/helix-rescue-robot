@@ -5,7 +5,7 @@
 
 export const ALLOWED_ACTIONS = new Set([
   'move', 'harvest', 'cover', 'deploy_flotation', 'clear_debris', 'load', 'start_carry',
-  'handoff', 'dispatch', 'public_alert', 'commit_extraction', 'hold', 'escalate_humans', 'set_down', 'request_assist',
+  'handoff', 'dispatch', 'public_alert', 'commit_extraction', 'hold', 'escalate_humans', 'set_down', 'request_assist', 'recall',
 ]);
 
 const ALLOW = (rule = 'ok') => ({ decision: 'ALLOW', rule, reason: '' });
@@ -95,6 +95,7 @@ export function gate(sim, action) {
     case 'set_down':
     case 'escalate_humans':
     case 'request_assist':
+    case 'recall': // coming out is always safe to allow
       return ALLOW();
     case 'handoff':
       if (!sim.isSafeZone(r.x, r.y)) return BLOCK('R12_safe_zone', 'handoff only inside a verified safe zone');
