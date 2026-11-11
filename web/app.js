@@ -104,8 +104,52 @@ function draw() {
   g.fillStyle = '#06222a'; g.font = 'bold 10px system-ui'; g.fillText('H', rx - 3.5, ry + 3.5);
   if (r.carrying) { g.strokeStyle = '#ff5fa2'; g.lineWidth = 3; g.beginPath(); g.arc(rx, ry, 13, 0, 7); g.stroke(); g.lineWidth = 1; }
   if (r.busy > 0) { g.fillStyle = '#fff'; g.font = '10px system-ui'; g.fillText(`${r.busyAction} ${r.busy}s`, rx + 12, ry - 10); }
+  effects(g, r, rx, ry);
   // legend
   $('legend').innerHTML = [['#35d0e6', 'Helix unit'], ['#ff5fa2', 'verified casualty'], ['#ffb454', 'unverified detection'], ['#4cd694', 'verified / delivered'], ['#ff7a28', sim.scenario === 'fire' ? 'fire & heat' : sim.scenario === 'water' ? 'current (lines)' : 'debris (red slash = too heavy)']].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
+}
+
+
+// ---------------------------------------------------------------- live sensing + energy effects (visual only; no effect on the simulation)
+const SENSE_LABEL = { thermal: 'heat', sound: 'voice', co2: 'breath', radar: 'radar', capacitive: 'touch' };
+function effects(g, r, rx, ry) {
+  const now = performance.now() / 1000, cfg = sim.sensorCfg(), st = sim.mission.state;
+  const searching = ['SEARCH', 'INVESTIGATE', 'APPROACH'].includes(st);
+  // heat-camera scan pulse around the unit while it searches
+  if (searching) {
+    for (const k of [0, 0.5]) {
+      const ph = (now * 0.5 + k) % 1;
+      g.strokeStyle = `rgba(53,208,230,${0.45 * (1 - ph)})`; g.lineWidth = 2; g.beginPath(); g.arc(rx, ry, ph * cfg.thermal.range * CELL, 0, 7); g.stroke();
+    }
+    g.fillStyle = 'rgba(53,208,230,0.9)'; g.font = '10px system-ui'; g.fillText('scanning: heat camera + microphones + radar', rx + 14, ry + 22);
+  }
+  for (const c of sim.casualties) {
+    if (!c.alive || c.aboard || c.delivered) continue;
+    const cx = Math.round(c.fx) * CELL + CELL / 2, cy = Math.round(c.fy) * CELL + CELL / 2, d = Math.hypot(sim.robot.x - c.fx, sim.robot.y - c.fy);
+    if (c.conscious && d <= cfg.sound.range) { // person calling for help: sound rings the robot can hear
+      for (const k of [0, 0.33, 0.66]) { const ph = (now * 0.7 + k) % 1; g.strokeStyle = `rgba(255,95,162,${0.7 * (1 - ph)})`; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, 6 + ph * 34, 0, 7); g.stroke(); }
+      g.fillStyle = '#ff9bc8'; g.font = '10px system-ui'; g.fillText('calling for help (voice heard)', cx + 12, cy + 24);
+    } else if (!c.conscious && d <= cfg.sound.range) { // unconscious: silent, found by heat + breathing + radar at close range
+      if (d <= cfg.thermal.range) { const a = 0.25 + 0.2 * Math.sin(now * 3); g.fillStyle = `rgba(255,150,60,${a})`; g.beginPath(); g.arc(cx, cy, 15, 0, 7); g.fill(); g.fillStyle = '#ffc48a'; g.font = '10px system-ui'; g.fillText('unconscious: heat + breathing signature', cx - 60, cy + 38); }
+    }
+  }
+  // which sensor types back each detection
+  for (const c of sim.candidates) {
+    const names = Object.keys(c.hits).filter((k) => c.hits[k] >= 2).map((k) => SENSE_LABEL[k]);
+    const all = Object.keys(c.hits).map((k) => SENSE_LABEL[k]);
+    const txt = (names.length ? names : all).join(' + ') + (c.status === 'verified' ? ' VERIFIED' : c.status === 'rejected' ? ' = decoy' : ' ?');
+    const px = Math.min(c.x * CELL + CELL * 1.2, sim.W * CELL - 150), py = c.y * CELL + 12; g.font = '9px system-ui'; const w = g.measureText(txt).width + 6;
+    g.fillStyle = 'rgba(8,14,22,0.8)'; g.fillRect(px - 3, py - 9, w, 12); g.fillStyle = c.status === 'verified' ? '#7be0ab' : c.status === 'rejected' ? '#8aa0b6' : '#ffd08a'; g.fillText(txt, px, py);
+  }
+  // energy harvesting: visible only when the unit is really harvesting
+  if (st === 'HARVEST') {
+    const water = sim.scenario === 'water', col = water ? '120,200,255' : '255,170,60';
+    for (let i = 0; i < 3; i++) { const ph = (now * 0.8 + i / 3) % 1; g.strokeStyle = `rgba(${col},${0.6 * (1 - ph)})`; g.lineWidth = 2; g.beginPath(); g.arc(rx, ry, 10 + ph * 26, 0, 7); g.stroke(); }
+    g.strokeStyle = '#ffe36b'; g.lineWidth = 2; g.beginPath();
+    for (let i = 0; i < 4; i++) { const a = now * 3 + i * 1.57, x0 = rx + Math.cos(a) * 24, y0 = ry + Math.sin(a) * 24; g.moveTo(x0, y0); g.lineTo((x0 + rx) / 2 + 3 * Math.sin(now * 20 + i), (y0 + ry) / 2); g.lineTo(rx, ry); }
+    g.stroke(); g.lineWidth = 1;
+    g.fillStyle = '#ffe36b'; g.font = 'bold 11px system-ui'; g.fillText(`charging from ${water ? 'flowing water' : 'heat'}  +${fmt(sim.harvestedTotal)}%`, rx - 70, ry - 34);
+  }
 }
 
 // ---------------------------------------------------------------- panels
@@ -164,6 +208,7 @@ function frame(ts) {
     while (acc >= 1 && n < 60) { acc -= 1; n++; if (sim.outcome && sim.pending.every((a) => a.status !== 'pending') && sim.mission.state === 'DONE') break; sim.step(); }
     if (n) { draw(); panels(); }
   }
+  if (playing) draw(); // keeps the sensing and charging animations moving between simulation steps
   requestAnimationFrame(frame);
 }
 
