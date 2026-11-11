@@ -507,6 +507,14 @@ export class Simulation {
   }
 
   // Triage: among verified casualties not yet handled, take the most critical first (least time left before the hazard wins).
+  // Multi-casualty fire: look first in the rooms closest to the fire, where people have the least time.
+  searchBonus(w) {
+    if (!this.multi || this.scenario !== 'fire') return 0;
+    let dmin = Infinity;
+    for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) if (this.fireI[this.idx(x, y)] > 0.3) dmin = Math.min(dmin, Math.hypot(x - w.x, y - w.y));
+    return Number.isFinite(dmin) ? Math.max(0, 30 - 2 * dmin) : 0;
+  }
+
   verifiedCandidate() {
     const list = this.candidates.filter((c) => c.status === 'verified' && !c.handled);
     if (!this.multi || list.length < 2) return list[0];
@@ -530,7 +538,8 @@ export class Simulation {
       let best = null;
       for (const w of opts) {
         const pl = this.plan({ x: r.x, y: r.y }, [{ x: w.x, y: w.y }], { allowDebris: this.scenario === 'collapse' });
-        if (pl && (!best || pl.cost < best.pl.cost || w.hint)) { best = { w, pl }; if (w.hint) break; }
+        if (pl) pl.score = pl.cost - this.searchBonus(w);
+        if (pl && (!best || pl.score < best.pl.score || w.hint)) { best = { w, pl }; if (w.hint) break; }
         if (!pl) w.done = w.hint ? true : w.done;
       }
       if (!best && this.multi && this.sweeps < 1) { this.sweeps++; for (const w of this.waypoints) w.done = false; this.emit('Mission', 'info', 'First pass finished: running a confirmation sweep before declaring the area clear'); return; }

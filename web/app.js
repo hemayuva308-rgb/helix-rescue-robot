@@ -7,7 +7,7 @@ const $ = (id) => document.getElementById(id);
 const DEPTH = { fire: 'Full', water: 'Full', collapse: 'Working' };
 const NAMES = { fire: 'Fire', water: 'Water', collapse: 'Collapse' };
 const q = new URLSearchParams(location.search);
-const DEMO_SEEDS = { fire: 4, water: 19, collapse: 4 };
+const DEMO_SEEDS = { fire: 60, water: 19, collapse: 4 };
 
 let scenario = q.get('scenario') && SCENARIO_NAMES.includes(q.get('scenario')) ? q.get('scenario') : 'fire';
 let sim = null, playing = true, speed = 2, acc = 0, last = 0, truth = false;

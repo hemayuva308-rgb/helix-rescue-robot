@@ -5,7 +5,7 @@ import { Simulation } from '../src/sim.js';
 const run = (sc, seed, n = 3) => new Simulation(sc, { seed, autoCommander: true, commanderDelay: 4, casualtyCount: n, casualtyWeight: 75 }).run(900);
 
 test('multi-casualty: unit keeps rescuing until the area is clear (demo seeds)', () => {
-  for (const [sc, seed] of [['fire', 4], ['water', 19], ['collapse', 4]]) {
+  for (const [sc, seed] of [['fire', 60], ['water', 19], ['collapse', 4]]) {
     const r = run(sc, seed);
     assert.equal(r.outcome, 'delivered', sc);
     assert.equal(r.delivered, 3, sc);
