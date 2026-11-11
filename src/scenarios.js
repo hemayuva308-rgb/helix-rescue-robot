@@ -4,7 +4,7 @@ import { makeRng } from './util.js';
 export const T = { VOID: 0, FLOOR: 1, WALL: 2, DOOR: 3, EXIT: 4, SAFE: 5, WATER: 6, DEBRIS: 7, WEIR: 8 };
 
 export const BASE_PARAMS = {
-  maxPayloadKg: 100, stretcherKg: 10, maxSoloCasualtyKg: 90,
+  maxPayloadKg: 100, stretcherKg: 10, maxSoloCasualtyKg: 90, pairCasualtyKg: 170, // two units carrying together: design assumption
   robotTempLimit: 150, carryTempLimit: 70, casualtyTempSafe: 45,
   batteryReserve: 8, moveBase: 0.06, movePerKg: 0.001, moveCurrent: 0.04, idleDrain: 0.004,
   harvestSafeDistance: 5, leakageLimitMa: 5, harvestMinTemp: 60, harvestMinCurrent: 0.6,

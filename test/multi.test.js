@@ -56,3 +56,23 @@ test('water: charging while moving never breaks a safety rule and a leakage faul
   for (let i = 0; i < 10; i++) faulty.step();
   assert.equal(faulty.transitTotal, 0, 'no charging while the leakage fault is active');
 });
+
+test('fleet: two units share the work, heavy casualties are lifted together, zero violations', () => {
+  const two = (sc, seed, n, w) => { const s = new Simulation(sc, { seed, autoCommander: true, commanderDelay: 4, casualtyCount: n, casualtyWeight: w, robots: 2, transitHarvest: true }); return { r: s.run(900), s }; };
+  for (const [sc, seed] of [['fire', 4], ['water', 5], ['collapse', 4]]) {
+    const { r } = two(sc, seed, 4, 75);
+    assert.equal(r.outcome, 'delivered', sc); assert.equal(r.delivered, 4, sc);
+    assert.equal(Object.values(r.violations).reduce((a, b) => a + b, 0), 0);
+  }
+  const heavy = two('fire', 7, 3, 105);
+  assert.equal(heavy.r.delivered, 3); assert.ok(heavy.s.assists >= 1);
+  assert.equal(Object.values(heavy.r.violations).reduce((a, b) => a + b, 0), 0);
+  const alone = new Simulation('fire', { seed: 7, autoCommander: true, commanderDelay: 4, casualtyCount: 3, casualtyWeight: 105, robots: 1 }).run(900);
+  assert.ok(alone.delivered < 3, 'one unit alone cannot lift 105 kg casualties');
+});
+
+test('distress call: a refused casualty raises a visible alarm naming the help needed', () => {
+  const s = new Simulation('fire', { seed: 7, autoCommander: true, commanderDelay: 4, casualtyCount: 3, casualtyWeight: 105, robots: 1 });
+  s.run(900);
+  assert.ok(s.alarms.some((a) => a.kind === 'human' && /second unit|lifting crew/.test(a.need)));
+});

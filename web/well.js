@@ -102,6 +102,8 @@ function draw() {
 // ---------------------------------------------------------------- panels
 function panels() {
   const m = sim.mission, r = sim.robot, c = sim.casualty;
+  const al = $('alarm'), last = sim.alarms[sim.alarms.length - 1];
+  if (last) { al.style.display = ''; al.className = 'alarm human'; al.innerHTML = `<b>DISTRESS CALL</b> · t=${last.t}s · needs <b>${esc(last.need)}</b><br><span>${esc(last.reason)}</span>`; } else al.style.display = 'none';
   $('stState').textContent = m.state.replace('_', ' '); $('stTime').textContent = `${sim.t}s`;
   $('stRescued').textContent = c.delivered ? '1 / 1' : '0 / 1';
   const o = $('stOutcome');

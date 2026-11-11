@@ -35,7 +35,7 @@ export class WellSimulation {
     this.approvals = new Set(); this.pending = []; this.alerts = [];
     this.injection = { attempts: 0, blocked: 0 };
     this.violations = { gasIgnition: 0, overspeedHoist: 0, overload: 0, ropeOverrun: 0, noApproval: 0, stuckInShaft: 0 };
-    this.outcome = null; this.humanTeamRequested = false; this.refusals = [];
+    this.outcome = null; this.humanTeamRequested = false; this.refusals = []; this.alarms = [];
     const D = clamp(opts.depthM ?? 14, 4, 60);
     const where = opts.where ?? this.rng.pick(['ledge', 'water', 'water', 'bottom']);
     const waterAt = +(D * 0.62).toFixed(1);
@@ -154,6 +154,9 @@ export class WellSimulation {
     this.robot.fan = false;
     this.runGate({ type: 'escalate_humans' });
     this.emit('Dispatch', 'warn', `HUMAN TEAM REQUESTED: ${reason}`);
+    const need = /deep|diver/i.test(reason) ? 'divers' : /rope|narrow|borewell|excavat|rating/i.test(reason) ? 'a rope rescue or excavation team' : /battery/i.test(reason) ? 'a recovery team' : 'a human rescue team';
+    this.alarms.push({ t: this.t, kind: 'human', unit: 'A', reason, need });
+    this.emit('Dispatch', 'crit', `ALARM: help needed (${need}). ${reason}`, { alarm: true });
     this.refusals.push({ t: this.t, reason });
     this.outcome = { result, reason, t: this.t };
   }

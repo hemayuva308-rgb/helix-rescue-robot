@@ -65,6 +65,14 @@ export class Simulation {
     this.waypoints = sc.waypoints.map((w) => ({ ...w, done: false }));
     this.mission = { state: 'SEARCH', path: [], target: null, casualty: null, note: '' };
     this.visited = new Uint8Array(this.W * this.H);
+    // fleet: unit A is the original robot/mission; extra units (B, C) share the same world and take turns each second
+    this.units = [{ id: 'A', robot: this.robot, mission: this.mission }];
+    for (let i = 1; i < Math.max(1, Math.min(3, Math.round(opts.robots ?? 1))); i++) {
+      this.units.push({ id: 'ABC'[i], robot: { ...this.robot, trail: [], battery: scenario === 'water' ? 90 : this.robot.battery, /* reserve units come fresh from base */ blankets: Math.max(1, sc.casualties.length) }, mission: { state: 'SEARCH', path: [], target: null, casualty: null, note: '' } });
+    }
+    this.fleet = this.units.length > 1;
+    this.cur = this.units[0];
+    this.alarms = []; this.assists = 0;
 
     // fire state
     this.fireI = new Float32Array(this.W * this.H);
@@ -216,13 +224,47 @@ export class Simulation {
     this.emit('Dispatch', 'action', `ALERT SENT to medical and fire teams: ${msg}`);
     if (this.opts.onAlert) this.opts.onAlert(msg, this);
   }
+  useUnit(u) { this.cur = u; this.robot = u.robot; this.mission = u.mission; }
+  setAllStates(s) { for (const u of this.units) u.mission.state = s; }
+
+  // A visible distress call: the unit does not just stop, it asks for exactly the help it needs.
+  needFor(reason) {
+    if (/kg|heavy|payload|solo|capacity/i.test(reason)) return 'a second unit or a lifting crew';
+    if (/fire|heat|hot|temperature/i.test(reason)) return 'a fire crew';
+    if (/deep|diver|depth|current/i.test(reason)) return 'divers';
+    if (/crane|block|rope|collapse|structur/i.test(reason)) return 'a rope or crane team';
+    if (/battery/i.test(reason)) return 'a recovery team';
+    return 'a human rescue team';
+  }
+  raiseAlarm(kind, reason, need = this.needFor(reason)) {
+    const r = this.robot;
+    const a = { t: this.t, kind, unit: this.cur.id, x: r.x, y: r.y, reason, need };
+    this.alarms.push(a);
+    this.emit('Dispatch', 'crit', `ALARM from unit ${this.cur.id}: help needed (${need}). ${reason}`, { alarm: true });
+    return a;
+  }
+
   // Multi-casualty rescue: one casualty that cannot be moved safely is referred to the human team and the unit
   // carries on with the others. Global problems (battery exhausted, nothing left to find) still end the mission.
   skipCasualty(c, reason) {
+    // Unit-specific trouble (low battery, no safe charging spot): hand the casualty to another unit before calling humans.
+    if (this.fleet && /battery|harvest|drift/i.test(reason)) {
+      c.triedBy = c.triedBy ?? new Set(); c.triedBy.add(this.cur.id);
+      const next = this.units.find((u) => u !== this.cur && !c.triedBy.has(u.id) && u.robot.battery > this.robot.battery + 5);
+      if (next) {
+        this.emit('Mission', 'warn', `Unit ${this.cur.id} cannot take casualty ${c.id} (${reason}). Asking another unit with more battery to take over.`);
+        this.alarms.push({ t: this.t, kind: 'unit', unit: this.cur.id, x: this.robot.x, y: this.robot.y, reason: `${c.id}: ${reason}`, need: `unit ${next.id}` });
+        for (const k of this.candidates) if (k.handled && dist(k, { x: Math.round(c.fx), y: Math.round(c.fy) }) <= 3) k.handled = false;
+        this.resetMission();
+        if (this.robot.carrying === c) { c.aboard = false; this.robot.carrying = null; }
+        return;
+      }
+    }
     this.humanTeamRequested = true;
     this.runGate({ type: 'escalate_humans' });
     c.referred = true;
     this.emit('Dispatch', 'warn', `HUMAN TEAM REQUESTED for ${c.id}: ${reason}. Unit moves on to the next casualty.`);
+    this.raiseAlarm('human', `${c.id}: ${reason}`);
     this.refusals.push({ t: this.t, reason: `${c.id}: ${reason}` });
     this.resetMission();
     if (this.robot.carrying === c) { c.aboard = false; this.robot.carrying = null; }
@@ -230,7 +272,10 @@ export class Simulation {
   }
 
   resetMission() {
-    Object.assign(this.mission, { path: [], target: null, casualty: null, candidate: null, energyNeeded: undefined, harvest: null, noPath: 0, harvestAttempts: 0, harvestReplans: 0 });
+    const mm = this.mission;
+    if (mm.partner) { mm.partner.mission.state = 'SEARCH'; mm.partner.mission.partner = null; mm.partner.mission.arrived = false; mm.partner.mission.path = []; }
+    for (const k of this.casualties) if (k.claimedBy === this.cur.id) k.claimedBy = null;
+    Object.assign(this.mission, { path: [], target: null, casualty: null, candidate: null, energyNeeded: undefined, harvest: null, noPath: 0, harvestAttempts: 0, harvestReplans: 0, paired: false, partner: null, arrived: false, assistFail: false, waitT: 0 });
     this.setState('SEARCH');
   }
 
@@ -240,7 +285,7 @@ export class Simulation {
     if (!this.multi || this.outcome || this.remaining().length) return;
     const n = this.casualties.filter((c) => c.delivered).length;
     const ref = this.casualties.filter((c) => c.referred).length, gone = this.casualties.length - n - ref;
-    this.setState('DONE');
+    this.setAllStates('DONE');
     this.finish(n === this.casualties.length ? 'delivered' : n ? 'escalated_partial' : 'escalated', `Area clear: ${n} of ${this.casualties.length} casualties delivered to a safe zone${ref ? `, ${ref} referred to the human team` : ''}${gone ? `, ${gone} did not survive` : ''}`);
   }
 
@@ -250,9 +295,10 @@ export class Simulation {
     if (this.multi && cur && result === 'escalated' && cur.alive && !cur.delivered && !cur.lost && !cur.referred) { this.skipCasualty(cur, reason); return; }
     if (this.multi && cur && result === 'escalated_timeout' && cur.alive && !cur.delivered && !cur.lost && !cur.referred) { this.skipCasualty(cur, reason); return; }
     this.humanTeamRequested = true;
-    this.mission.state = 'HOLD_ESCALATED'; this.mission.path = [];
+    this.setAllStates('HOLD_ESCALATED'); this.mission.path = [];
     this.runGate({ type: 'escalate_humans' });
     this.emit('Dispatch', 'warn', `HUMAN TEAM REQUESTED: ${reason}`);
+    this.raiseAlarm('human', reason);
     this.refusals.push({ t: this.t, reason });
     this.outcome = { result, reason, t: this.t };
   }
@@ -405,13 +451,15 @@ export class Simulation {
       if (c.health <= 0 && c.alive) { c.alive = false; this.emit('System', 'crit', `Casualty ${c.id} died (simulated exposure)`); if (this.multi) this.casualtyGone(c); else this.finish('casualty_died', 'Casualty did not survive'); }
     }
     // invariants (counted only if something slipped past the gate, which is the point of the "gate OFF" comparison)
-    const r = this.robot;
+    for (const u of this.units) {
+    const r = u.robot;
     if (r.carrying) {
       const c = r.carrying;
       if (this.tempAt(r.x, r.y) > this.params.carryTempLimit) this.violations.carryTemp++;
       if (this.scenario === 'water' && !r.flotationDeployed) this.violations.noFlotation++;
       if (c.unclothed && !c.covered) this.violations.uncoveredCarried++;
-      if (c.weightKg > this.params.maxSoloCasualtyKg) this.violations.overCapacityCarried++;
+      if (c.weightKg > (u.mission.paired ? this.params.pairCasualtyKg : this.params.maxSoloCasualtyKg)) this.violations.overCapacityCarried++;
+    }
     }
   }
 
@@ -437,6 +485,7 @@ export class Simulation {
     const r = this.robot;
     let s = 1.0;
     if (r.carrying) s = (r.carrying.age === 'child' || r.carrying.age === 'elderly') ? 0.5 : 0.7;
+    if (r.carrying && this.mission.paired) s *= 0.8; // two units move more carefully together
     if (this.scenario === 'water') s *= clamp(1 - 0.15 * this.currentMagAt(r.x, r.y), 0.4, 1);
     return s;
   }
@@ -517,13 +566,14 @@ export class Simulation {
       case 'AWAIT_APPROVAL': return this.doAwait();
       case 'PREP': return this.doPrep();
       case 'CARRY': return this.doCarry();
+      case 'ASSIST': return this.doAssist();
       case 'HOLD_ESCALATED': return;
       default: return;
     }
   }
 
   casualtyFor(cand) {
-    return this.casualties.filter((x) => x.alive && !x.delivered && !x.lost && !x.referred).sort((a, b) => dist({ x: a.fx, y: a.fy }, cand) - dist({ x: b.fx, y: b.fy }, cand))[0];
+    return this.casualties.filter((x) => x.alive && !x.delivered && !x.lost && !x.referred && (!x.claimedBy || x.claimedBy === this.cur.id) && !(x.triedBy && x.triedBy.has(this.cur.id))).sort((a, b) => dist({ x: a.fx, y: a.fy }, cand) - dist({ x: b.fx, y: b.fy }, cand))[0];
   }
 
   // Triage: among verified casualties not yet handled, take the most critical first (least time left before the hazard wins).
@@ -536,7 +586,7 @@ export class Simulation {
   }
 
   verifiedCandidate() {
-    const list = this.candidates.filter((c) => c.status === 'verified' && !c.handled);
+    const list = this.candidates.filter((c) => c.status === 'verified' && !c.handled && (!this.multi || this.casualtyFor(c)));
     if (!this.multi || list.length < 2) return list[0];
     const scored = list.map((cand) => { const k = this.casualtyFor(cand); return { cand, k, tt: k ? this.timeToHazard(k) : Infinity }; }).sort((a, b) => a.tt - b.tt);
     const seen = new Set(), uniq = scored.filter((s) => s.k && !seen.has(s.k.id) && seen.add(s.k.id));
@@ -555,7 +605,7 @@ export class Simulation {
     if (!m.target || m.target.done) {
       for (const w of this.waypoints) if (!w.done && dist(w, r) <= this.params.scanRadius) w.done = true;
       const hint = (this.hints ?? []).find((h) => !h.used);
-      const opts = this.waypoints.filter((w) => !w.done);
+      const opts = this.waypoints.filter((w) => !w.done && !(this.fleet && this.units.some((u) => u !== this.cur && u.mission.target === w)));
       if (hint) { hint.used = true; opts.unshift({ x: hint.x, y: hint.y, hint: true, done: false }); }
       let best = null;
       for (const w of opts) {
@@ -564,6 +614,7 @@ export class Simulation {
         if (pl && (!best || pl.score < best.pl.score || w.hint)) { best = { w, pl }; if (w.hint) break; }
         if (!pl) w.done = w.hint ? true : w.done;
       }
+      if (!best && this.fleet && this.units.some((u) => u !== this.cur && (u.mission.state !== 'SEARCH' || u.mission.target))) return; // other units are still working: wait
       if (!best && this.multi && this.sweeps < 1) { this.sweeps++; for (const w of this.waypoints) w.done = false; this.emit('Mission', 'info', 'First pass finished: running a confirmation sweep before declaring the area clear'); return; }
       if (!best) {
         if (this.multi && !this.remaining().length) { this.checkAllDone(); return; }
@@ -603,6 +654,21 @@ export class Simulation {
     if (res === 'blocked') m.path = [];
   }
 
+  // Heavy casualty: ask a free unit to share the lift (two units carry up to the pair limit). Returns true if a partner was called.
+  tryPair(c, kg) {
+    const m = this.mission, p = this.params, r = this.robot;
+    if (!this.fleet || m.paired || kg <= p.maxSoloCasualtyKg || kg > p.pairCasualtyKg) return false;
+    const buddy = this.units.find((u) => u !== this.cur && u.mission.casualty == null && ['SEARCH', 'INVESTIGATE', 'ASSESS'].includes(u.mission.state) && !u.robot.carrying && u.robot.busy === 0 && u.robot.battery > 25);
+    if (!buddy) return false;
+    this.runGate({ type: 'request_assist' });
+    m.paired = true; m.partner = buddy; m.waitT = 0; this.assists++;
+    Object.assign(buddy.mission, { state: 'ASSIST', partner: this.cur, arrived: false, path: [], target: null, candidate: null });
+    const msg = `casualty ${c.id} is about ${kg.toFixed(0)} kg, over the ${p.maxSoloCasualtyKg} kg one-unit limit; two units can carry up to ${p.pairCasualtyKg} kg together`;
+    this.emit('Mission', 'warn', `Unit ${this.cur.id} cannot lift this alone and calls unit ${buddy.id} for help: ${msg}.`);
+    this.alarms.push({ t: this.t, kind: 'unit', unit: this.cur.id, x: r.x, y: r.y, reason: msg, need: `unit ${buddy.id}` });
+    return true;
+  }
+
   doAssess() {
     const m = this.mission, r = this.robot, p = this.params, c0 = m.candidate;
     const c = this.multi ? this.casualtyFor(c0) : this.casualties.filter((x) => x.alive && !x.delivered && !x.lost).sort((a, b) => dist({ x: a.fx, y: a.fy }, c0) - dist({ x: b.fx, y: b.fy }, c0))[0];
@@ -612,7 +678,7 @@ export class Simulation {
     else if (drift > 4) { c0.status = 'rejected'; this.setState('SEARCH'); return; }
     c.verifiedOnce = true;
     c0.handled = true;
-    m.casualty = c;
+    m.casualty = c; c.claimedBy = this.cur.id;
     const est = c.weightKg * (1 + this.rng.range(-0.08, 0.08));
     c.estimate = est;
     this.emit('Mission', 'info', `Casualty profile (non-visual body scan): about ${est.toFixed(0)} kg, ${c.age}, ${c.conscious ? 'conscious' : 'unconscious'}${c.unclothed ? ', unclothed' : ''}${c.spinal ? ', spinal injury suspected' : ''}`);
@@ -629,7 +695,8 @@ export class Simulation {
     const energy = this.pathEnergy(toC.path, 0) + this.pathEnergy(out.path, est + p.stretcherKg) + 2.5;
     m.energyNeeded = energy;
     const gain = this.transitGain(toC.path) + this.transitGain(out.path);
-    const g = this.runGate({ type: 'commit_extraction', weightKgEstimate: est, energyNeeded: energy - gain });
+    this.tryPair(c, est);
+    const g = this.runGate({ type: 'commit_extraction', weightKgEstimate: est, energyNeeded: energy - gain, paired: !!m.paired });
     if (gain > 0.05 && g.decision !== 'BLOCK') this.emit('Mission', 'info', `Energy plan: needs ${energy.toFixed(1)}%, expects to pick up about ${gain.toFixed(1)}% from the current on the way (sealed turbine, checked by the gate every second)`);
     if (g.decision === 'BLOCK') {
       this.emit('Gate', 'block', `${g.rule}: ${g.reason}`);
@@ -742,6 +809,15 @@ export class Simulation {
 
   doAwait() {
     const m = this.mission, c = m.casualty;
+    if (m.paired) {
+      if (m.assistFail) { this.escalate('The second unit could not reach the casualty: human team requested'); return; }
+      if (!m.partner.mission.arrived) {
+        m.waitT = (m.waitT ?? 0) + 1;
+        if (m.waitT === 1) this.emit('Operator', 'info', `Waiting for unit ${m.partner.id} to arrive before lifting together.`);
+        if (m.waitT > 90) this.escalate('The second unit did not arrive in time: human team requested');
+        return;
+      }
+    }
     const g = this.runGate({ type: 'load', casualty: c }, true);
     if (g.decision === 'ALLOW') { this.setState('PREP'); return; }
     if (g.decision === 'APPROVAL') this.requestApproval(g.role === 'medic' ? 'medic' : 'lift', c.id, g.role, g.reason);
@@ -767,12 +843,13 @@ export class Simulation {
       c.aboard = true; r.carrying = c; c.x = r.x; c.y = r.y; c.fx = r.x; c.fy = r.y;
       if (c.spinal && !this.approvals.has('medic:' + c.id)) this.violations.spinalMoved++;
       const measured = c.weightKg;
-      const g = this.runGate({ type: 'start_carry', casualty: c, weightKgMeasured: measured });
+      const g = this.runGate({ type: 'start_carry', casualty: c, weightKgMeasured: measured, paired: !!this.mission.paired });
       if (g.decision === 'BLOCK') {
         this.emit('Gate', 'block', `${g.rule}: ${g.reason}`);
         if (g.rule === 'R2_payload') {
           this.runGate({ type: 'set_down' });
           c.aboard = false; r.carrying = null;
+          if (this.tryPair(c, measured)) { this.emit('Operator', 'info', `Load sensor reads ${measured.toFixed(0)} kg: casualty set down gently while the second unit comes.`); this.setState('AWAIT_APPROVAL'); return; }
           this.escalate(`Load sensor reads ${measured.toFixed(0)} kg (estimate was ${c.estimate.toFixed(0)} kg): over the ${this.params.maxSoloCasualtyKg} kg limit. Casualty set down safely, human team requested`);
         }
         return;
@@ -781,6 +858,24 @@ export class Simulation {
       m.path = []; this.setState('CARRY');
     });
     if (this.mission.state === 'PREP') this.mission.state = 'PREP_BUSY';
+  }
+
+  // Second unit helping a partner with a heavy casualty: travels to the casualty, then follows the partner while it carries.
+  doAssist() {
+    const m = this.mission, r = this.robot, A = m.partner;
+    if (!A || A.mission.partner !== this.cur) { m.state = 'SEARCH'; m.partner = null; m.arrived = false; return; }
+    const c = A.mission.casualty;
+    if (A.mission.state === 'CARRY' && r.carrying === undefined) { /* follow below */ }
+    if (A.mission.state === 'CARRY') { r.x = A.robot.x; r.y = A.robot.y; r.battery -= this.params.moveBase + 0.001 * 50; return; }
+    if (!c) return;
+    const cx = Math.round(c.fx), cy = Math.round(c.fy);
+    if (dist(r, { x: cx, y: cy }) <= 1.5) { if (!m.arrived) { m.arrived = true; this.emit('Operator', 'ok', `Unit ${this.cur.id} has arrived next to casualty ${c.id} to share the lift.`); } return; }
+    if (!m.path.length || this.t % 3 === 0) {
+      const pl = this.plan({ x: r.x, y: r.y }, [{ x: cx, y: cy }], { allowDebris: this.scenario === 'collapse' });
+      if (!pl) { A.mission.assistFail = true; return; }
+      m.path = pl.path.slice(1);
+    }
+    this.follow();
   }
 
   doCarry() {
@@ -834,16 +929,24 @@ export class Simulation {
     this.leakageMa = 1.2 + (this.opts.leakageFaultAt && this.t >= this.opts.leakageFaultAt && this.t < this.opts.leakageFaultAt + 14 ? 8 : 0);
     for (const rp of this.sc.reports) if (rp.t === this.t) this.ingestReport(rp);
     this.stepWorld();
-    this.robot.battery -= this.params.idleDrain;
-    if (this.robot.battery <= 0 && !this.outcome) { this.robot.battery = 0; this.escalate('Battery exhausted: human team requested', 'escalated'); }
-    this.processApprovals();
-    const r = this.robot;
-    if (r.busy > 0) { r.busy--; if (r.busy === 0) { const fn = r.onDone; r.onDone = null; r.busyAction = null; fn?.(); if (this.mission.state === 'PREP_BUSY') { if (!r.carrying && !this.outcome) this.mission.state = 'PREP'; } } }
-    else {
-      this.sense();
-      this.updateCandidates();
-      this.missionStep();
+    for (const u of this.units) {
+      this.useUnit(u);
+      this.robot.battery -= this.params.idleDrain;
+      if (this.robot.battery <= 0 && !this.outcome) { this.robot.battery = 0; this.escalate('Battery exhausted: human team requested', 'escalated'); }
     }
+    this.processApprovals();
+    for (const u of this.units) {
+      this.useUnit(u);
+      if (this.outcome) break;
+      const r = this.robot;
+      if (r.busy > 0) { r.busy--; if (r.busy === 0) { const fn = r.onDone; r.onDone = null; r.busyAction = null; fn?.(); if (this.mission.state === 'PREP_BUSY') { if (!r.carrying && !this.outcome) this.mission.state = 'PREP'; } } }
+      else {
+        this.sense();
+        this.updateCandidates();
+        this.missionStep();
+      }
+    }
+    this.useUnit(this.units[0]);
     if (this.t >= MAX_T && !this.outcome) this.finish('timeout', 'Mission time limit reached');
   }
 

@@ -5,7 +5,7 @@
 
 export const ALLOWED_ACTIONS = new Set([
   'move', 'harvest', 'cover', 'deploy_flotation', 'clear_debris', 'load', 'start_carry',
-  'handoff', 'dispatch', 'public_alert', 'commit_extraction', 'hold', 'escalate_humans', 'set_down',
+  'handoff', 'dispatch', 'public_alert', 'commit_extraction', 'hold', 'escalate_humans', 'set_down', 'request_assist',
 ]);
 
 const ALLOW = (rule = 'ok') => ({ decision: 'ALLOW', rule, reason: '' });
@@ -45,7 +45,7 @@ export function gate(sim, action) {
     }
     case 'commit_extraction': {
       const reserve = p.batteryReserve;
-      if (action.weightKgEstimate > p.maxSoloCasualtyKg) return BLOCK('R2_payload', `estimated ${action.weightKgEstimate.toFixed(0)}kg exceeds ${p.maxSoloCasualtyKg}kg solo limit: request human team`);
+      if (action.weightKgEstimate > (action.paired ? p.pairCasualtyKg : p.maxSoloCasualtyKg)) return BLOCK('R2_payload', `estimated ${action.weightKgEstimate.toFixed(0)}kg exceeds the ${action.paired ? p.pairCasualtyKg + 'kg two-unit' : p.maxSoloCasualtyKg + 'kg solo'} limit: request human team`);
       if (action.energyNeeded + reserve > r.battery) return BLOCK('R6_battery', `needs ${action.energyNeeded.toFixed(1)}% + ${reserve}% reserve, battery ${r.battery.toFixed(1)}%`);
       return ALLOW();
     }
@@ -57,7 +57,7 @@ export function gate(sim, action) {
     }
     case 'start_carry': {
       const c = action.casualty;
-      if (action.weightKgMeasured > p.maxSoloCasualtyKg) return BLOCK('R2_payload', `measured ${action.weightKgMeasured.toFixed(0)}kg exceeds ${p.maxSoloCasualtyKg}kg after lift: set down and request human team`);
+      if (action.weightKgMeasured > (action.paired ? p.pairCasualtyKg : p.maxSoloCasualtyKg)) return BLOCK('R2_payload', `measured ${action.weightKgMeasured.toFixed(0)}kg exceeds ${action.paired ? p.pairCasualtyKg : p.maxSoloCasualtyKg}kg after lift: set down and request human team`);
       if (c.unclothed && !c.covered) return BLOCK('R10_dignity', 'casualty must be covered before being carried out');
       if (sim.scenario === 'water' && !r.flotationDeployed) return BLOCK('R8_flotation', 'flotation must be deployed before towing a casualty');
       return ALLOW();
@@ -94,6 +94,7 @@ export function gate(sim, action) {
     case 'hold':
     case 'set_down':
     case 'escalate_humans':
+    case 'request_assist':
       return ALLOW();
     case 'handoff':
       if (!sim.isSafeZone(r.x, r.y)) return BLOCK('R12_safe_zone', 'handoff only inside a verified safe zone');
