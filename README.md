@@ -13,11 +13,14 @@ Simplifications: the fire scenario is a single floor plan with six rooms and two
 
 The long-term vision the decision layer is built for: a human-shaped, human-height (about 5 ft) rescue robot with arms and legs that walks at human pace and carries a casualty of up to about 90 kg in its arms, with sensors in the head and chest. It is a concept illustration, not a CAD model, and not something built or tested yet. What exists today is the decision layer, proven in simulation.
 
+## Robot designed as code
+`robot/helix.urdf` describes the rescue robot in URDF, the format ROS and Gazebo read: 20 links, 19 joints (12 actuated), human height (about 1.5 m, 5 ft), about 80 kg (assumed), sensors in the head and chest, a back-mounted battery. Open `/web/robot.html` for a 3D viewer with joint sliders, a carry pose and a walking preview. The preview is a kinematic joint-angle animation for design review; it does not model balance, contact or real walking speed. `src/urdf.js` loads the file and computes forward kinematics, height, mass and centre of mass (7 tests).
+
 ## Run it
 
 ```bash
 node server.js            # http://localhost:8080  (no dependencies, Node 20+)
-npm test                  # 19 tests: gate rules, determinism, audit chain, injection, invariants
+npm test                  # 26 tests: gate rules, determinism, audit chain, injection, invariants, URDF model
 npm run eval              # 100 randomised runs per scenario -> eval/RESULTS.md and eval/results.json
 docker compose up         # same server in a container
 ```
@@ -57,6 +60,8 @@ src/scenarios.js   fire / water / collapse packs and parameters (placeholders)
 src/gate.js        deterministic safety gate
 src/sim.js         world, sensors, verification, mission agent, approvals, dispatch
 src/audit.js       hash-chained audit log
+src/urdf.js        URDF loader, forward kinematics, model statistics
+robot/helix.urdf   the robot, described as code
 web/               dashboard (canvas + panels)
 server.js          static server + /api/alert + /api/brief
 eval/run.js        reproducible evaluation

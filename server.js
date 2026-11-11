@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT ?? 8080);
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.md': 'text/markdown; charset=utf-8' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.md': 'text/markdown; charset=utf-8', '.urdf': 'application/xml', '.png': 'image/png', '.svg': 'image/svg+xml' };
 
 async function body(req) { let b = ''; for await (const c of req) { b += c; if (b.length > 20000) break; } try { return JSON.parse(b || '{}'); } catch { return {}; } }
 const send = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)); };
@@ -45,7 +45,7 @@ http.createServer(async (req, res) => {
   if (url.pathname === '/api/health') return send(res, 200, { ok: true, telegram: Boolean(process.env.TELEGRAM_BOT_TOKEN), llm: Boolean(process.env.LLM_API_KEY) });
   let p = url.pathname === '/' ? '/web/index.html' : url.pathname;
   p = normalize(p).replace(/^(\.\.[/\\])+/, '');
-  const allowed = p.startsWith('/web/') || p.startsWith('/src/') || p.startsWith('/eval/') || p === '/README.md';
+  const allowed = p.startsWith('/web/') || p.startsWith('/src/') || p.startsWith('/eval/') || p.startsWith('/robot/') || p === '/README.md';
   if (!allowed) { res.writeHead(404); return res.end('not found'); }
   try { const data = await readFile(join(ROOT, p)); res.writeHead(200, { 'content-type': MIME[extname(p)] ?? 'application/octet-stream', 'cache-control': 'no-cache' }); res.end(data); }
   catch { res.writeHead(404); res.end('not found'); }
