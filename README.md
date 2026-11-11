@@ -8,6 +8,11 @@ A rescue unit in simulation finds, verifies and carries a casualty (up to about 
 
 Simplifications: the fire scenario is a single floor plan with six rooms and two exits (the planning documents mention three floors); sensors, heat, smoke and current are toy models; the unit has global knowledge of temperature (as from a building fire-alarm system).
 
+## Robot concept
+![Helix rescue unit concept](docs/robot_concept.png)
+
+A concept illustration of the rescue unit the decision layer is designed for: a low tracked base, a 1.7 m sensor mast, a lift arm and a stretcher with a load cell (casualty up to about 90 kg). It is not a CAD model; all dimensions are first-pass design assumptions.
+
 ## Run it
 
 ```bash
