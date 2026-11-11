@@ -28,3 +28,26 @@ The robot itself is described in `robot/helix.urdf` (links, joints, limits, mass
 - A hardware safety controller with a physical emergency stop, independent of the software.
 - Locomotion and balance control (walking, carrying a load) developed and validated in physics simulation first.
 - A validation plan and certification with fire and rescue experts.
+
+## Readiness assessment (honest)
+
+| Area | Status |
+| --- | --- |
+| Decision layer, safety gate, approvals, audit log, triage, fleet, distress calls, operator console, 4 scenarios | Working in simulation, 46 automated tests, reproducible evaluation (single unit, single casualty) |
+| Hardware abstraction (`src/hal.js`) | Designed and tested for the fire, flood and collapse gate. The well gate, fleet and operator console are not yet routed through it |
+| Robot body (`robot/helix.urdf`) | Kinematic description only. Masses, torques, joint limits are assumptions. Walking is an animation, not physics |
+| Sensors | Simulated readings. No real sensor data has been used or validated |
+| Locomotion, balance, carrying 90 kg, swimming, heat tolerance | Not built, not simulated with physics, not tested |
+| Energy harvesting, winch, tether, rescue pod | Design concepts |
+| Operator link | The handheld screen runs on the same simulation. No radio, no latency, no link-loss behaviour yet |
+| Certification, emergency stop, explosion-proof and waterproof rating | Not started |
+
+Verdict: **the software architecture is ready to be attached to hardware; a robot is not ready to be built from this yet.**
+
+## Suggested path
+1. ROS 2: publish `robot/helix.urdf` with `robot_state_publisher`, check the joints in RViz2.
+2. Wrap the decision layer as a ROS 2 node: sensor topics in, action requests out through the gate node, then the controller.
+3. Gazebo physics: start with a simplified body (a tracked or wheeled base with one arm) and a dummy load, then test balance, carrying and water.
+4. Cheapest real hardware first: a sensing payload (thermal camera, microphone array, CO2 and gas sensor, radar) on a small rover to validate detection with real data, plus a real operator screen and alarm over Wi-Fi or radio.
+5. Only then a lift mechanism with a dummy load, and the winch and rescue pod as a bench model.
+6. Add link-loss behaviour (units hold and raise an alarm if the operator link drops) before any field test.
