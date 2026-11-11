@@ -25,10 +25,10 @@ function person(g, x, y, s = 1, alpha = 1, shirt = '#e98a3c') {
 function robotSide(g, x, gy, carrying, busy) {
   g.save(); g.translate(x, gy); const s = 1.0;
   g.fillStyle = '#273449'; g.fillRect(-9 * s, -34 * s, 7 * s, 34 * s); g.fillRect(2 * s, -34 * s, 7 * s, 34 * s);        // legs
-  g.fillStyle = '#3b82c4'; g.beginPath(); g.roundRect(-11 * s, -74 * s, 22 * s, 42 * s, 5); g.fill();                        // torso
+  g.fillStyle = '#12306b'; g.beginPath(); g.roundRect(-11 * s, -74 * s, 22 * s, 42 * s, 5); g.fill();                        // torso
   g.fillStyle = '#cfe3f5'; g.beginPath(); g.arc(0, -84 * s, 9 * s, 0, 7); g.fill();                                           // head
-  g.fillStyle = '#12c4e0'; g.fillRect(2 * s, -87 * s, 8 * s, 5 * s);                                                          // visor
-  g.strokeStyle = '#2a6fb0'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(8 * s, -66 * s); g.lineTo(carrying ? 24 * s : 18 * s, -52 * s + (busy ? 4 * Math.sin(performance.now() / 120) : 0)); g.stroke();
+  g.fillStyle = '#2ed3a6'; g.fillRect(2 * s, -87 * s, 8 * s, 5 * s);                                                          // visor
+  g.strokeStyle = '#1e4aa8'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(8 * s, -66 * s); g.lineTo(carrying ? 24 * s : 18 * s, -52 * s + (busy ? 4 * Math.sin(performance.now() / 120) : 0)); g.stroke();
   g.restore();
 }
 
@@ -36,40 +36,41 @@ function robotSide(g, x, gy, carrying, busy) {
 function shaftRobot(g, wx, m, sim, now) {
   const r = sim.robot, c = sim.casualty, wy = m(sim.well.waterAtM), y = m(r.ropeOutM), inWater = r.ropeOutM > sim.well.waterAtM;
   const top = inWater ? wy - 22 + 2 * Math.sin(now * 3) : y - 22;      // the dome stays above the surface while the pod floats
-  g.strokeStyle = '#ffd08a'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx - 5, m(0) - 60); g.lineTo(wx - 5, top); g.moveTo(wx + 5, m(0) - 60); g.lineTo(wx + 5, top); g.stroke(); // main rope + safety line
-  g.fillStyle = '#3b82c4'; g.beginPath(); g.roundRect(wx - 17, top, 34, 40, 10); g.fill(); g.strokeStyle = '#9fd3ff'; g.lineWidth = 1; g.stroke();   // pod body
+  g.strokeStyle = '#b86e00'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx - 5, m(0) - 60); g.lineTo(wx - 5, top); g.moveTo(wx + 5, m(0) - 60); g.lineTo(wx + 5, top); g.stroke(); // main rope + safety line
+  g.fillStyle = '#12306b'; g.beginPath(); g.roundRect(wx - 17, top, 34, 40, 10); g.fill(); g.strokeStyle = '#2ed3a6'; g.lineWidth = 1; g.stroke();   // pod body
   g.fillStyle = '#cfe3f5'; g.beginPath(); g.arc(wx, top + 2, 10, Math.PI, 0); g.fill();                                                          // camera dome
-  g.fillStyle = '#12c4e0'; g.beginPath(); g.arc(wx, top - 1, 3.5, 0, 7); g.fill();                                                                // lens
+  g.fillStyle = '#2ed3a6'; g.beginPath(); g.arc(wx, top - 1, 3.5, 0, 7); g.fill();                                                                // lens
   g.fillStyle = '#ffe36b'; g.fillRect(wx - 14, top + 8, 5, 4); g.fillRect(wx + 9, top + 8, 5, 4);                                                // lamps
   g.strokeStyle = '#ff8a3c'; g.lineWidth = 5; g.beginPath(); g.ellipse(wx, top + 30, 22, 6, 0, 0, 7); g.stroke();                                  // flotation collar
   g.strokeStyle = '#7fb4e6'; g.lineWidth = 4; g.lineCap = 'round';                                                                                 // soft cradle arms
   g.beginPath(); g.moveTo(wx - 15, top + 24); g.quadraticCurveTo(wx - 24, top + 52, wx - 6, top + 56); g.moveTo(wx + 15, top + 24); g.quadraticCurveTo(wx + 24, top + 52, wx + 6, top + 56); g.stroke();
   if (c.inArms) { g.fillStyle = '#e98a3c'; g.beginPath(); g.roundRect(wx - 6, top + 30, 12, 26, 5); g.fill(); g.fillStyle = '#e0bc9f'; g.beginPath(); g.arc(wx, top + 28, 5, 0, 7); g.fill(); }
   if (inWater) { g.fillStyle = 'rgba(30,100,170,0.45)'; g.fillRect(wx - 26, wy, 52, 60); g.strokeStyle = 'rgba(190,230,255,0.7)'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(wx, wy, 22 + 3 * Math.sin(now * 3), 4, 0, 0, 7); g.stroke(); }
-  g.fillStyle = '#fff'; g.font = '10px system-ui'; g.fillText(c.inArms ? 'rescue pod rising with the casualty' : inWater ? 'rescue pod floating to the casualty' : 'rescue pod on the tether', wx + 30, top + 14);
+  const lab = c.inArms ? 'rescue pod rising with the casualty' : inWater ? 'rescue pod floating to the casualty' : 'rescue pod on the tether', hw = Math.max(14, sim.well.widthM * 50);
+  g.font = 'bold 10px system-ui'; const lw = g.measureText(lab).width + 10; g.fillStyle = 'rgba(255,255,255,0.92)'; g.fillRect(wx + hw + 52, top + 2, lw, 15); g.fillStyle = '#0f1f3d'; g.fillText(lab, wx + hw + 57, top + 13);
 }
 function draw() {
   const cv = $('map'), g = cv.getContext('2d'), W = cv.width, H = cv.height, now = performance.now() / 1000;
   const GY = 150, scale = Math.min(11, (H - GY - 40) / Math.max(sim.well.depthM, 10)), m = (d) => GY + d * scale;
   const wx = 560, hw = Math.max(14, sim.well.widthM * 50), sx0 = wx - hw, sx1 = wx + hw, pxCell = (wx - 40) / P.wellX;
-  g.fillStyle = '#070b10'; g.fillRect(0, 0, W, H);
-  g.fillStyle = '#0d1823'; g.fillRect(0, 0, W, GY);                                    // sky
-  g.fillStyle = '#3a2f26'; g.fillRect(0, GY, sx0, H - GY); g.fillRect(sx1, GY, W - sx1, H - GY); // ground
-  g.fillStyle = '#12452f'; g.fillRect(0, GY - 6, 3.4 * pxCell + 10, 8); g.fillStyle = '#7be0ab'; g.font = '11px system-ui'; g.fillText('SAFE ZONE', 8, GY - 12);
-  g.fillStyle = '#4a5d70'; g.fillRect(0, GY - 2, sx0, 4); g.fillRect(sx1, GY - 2, W - sx1, 4);
+  g.fillStyle = '#eef3f9'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#eaf3fd'; g.fillRect(0, 0, W, GY);                                    // sky
+  g.fillStyle = '#d9c9b0'; g.fillRect(0, GY, sx0, H - GY); g.fillRect(sx1, GY, W - sx1, H - GY); // ground
+  g.fillStyle = '#7fe0bf'; g.fillRect(0, GY - 6, 3.4 * pxCell + 10, 8); g.fillStyle = '#0f8f6a'; g.font = '11px system-ui'; g.fillText('SAFE ZONE', 8, GY - 12);
+  g.fillStyle = '#9aa9bf'; g.fillRect(0, GY - 2, sx0, 4); g.fillRect(sx1, GY - 2, W - sx1, 4);
   // shaft
   const bottom = m(sim.well.depthM);
-  g.fillStyle = '#05080c'; g.fillRect(sx0, GY, sx1 - sx0, bottom - GY);
+  g.fillStyle = '#1b2a4a'; g.fillRect(sx0, GY, sx1 - sx0, bottom - GY);
   g.fillStyle = 'rgba(27,95,158,0.7)'; g.fillRect(sx0, m(sim.well.waterAtM), sx1 - sx0, bottom - m(sim.well.waterAtM));
-  g.fillStyle = '#3a2f26'; g.fillRect(sx0, bottom, sx1 - sx0, H - bottom);
-  g.strokeStyle = '#6b7c8f'; g.lineWidth = 3; g.beginPath(); g.moveTo(sx0, GY); g.lineTo(sx0, bottom); g.moveTo(sx1, GY); g.lineTo(sx1, bottom); g.lineTo(sx0, bottom); g.stroke();
-  if (sim.casualty.where === 'ledge') { g.fillStyle = '#6b7c8f'; g.fillRect(sx0, m(sim.casualty.posM) + 14, 50, 6); }
-  if (sim.gas.lel > P.lelLimit || sim.gas.o2 < P.o2Low) { g.fillStyle = `rgba(190,220,80,${0.14 + 0.05 * Math.sin(now * 2)})`; g.fillRect(sx0, GY, sx1 - sx0, bottom - GY); g.fillStyle = '#d8ef7a'; g.font = '11px system-ui'; g.fillText(`foul air: methane ${fmt(sim.gas.lel, 0)}% LEL, O2 ${fmt(sim.gas.o2)}%`, sx1 + 10, GY + 28); }
+  g.fillStyle = '#d9c9b0'; g.fillRect(sx0, bottom, sx1 - sx0, H - bottom);
+  g.strokeStyle = '#27407a'; g.lineWidth = 3; g.beginPath(); g.moveTo(sx0, GY); g.lineTo(sx0, bottom); g.moveTo(sx1, GY); g.lineTo(sx1, bottom); g.lineTo(sx0, bottom); g.stroke();
+  if (sim.casualty.where === 'ledge') { g.fillStyle = '#27407a'; g.fillRect(sx0, m(sim.casualty.posM) + 14, 50, 6); }
+  if (sim.gas.lel > P.lelLimit || sim.gas.o2 < P.o2Low) { g.fillStyle = `rgba(190,220,80,${0.14 + 0.05 * Math.sin(now * 2)})`; g.fillRect(sx0, GY, sx1 - sx0, bottom - GY); g.fillStyle = '#6b7a00'; g.font = '11px system-ui'; g.fillText(`foul air: methane ${fmt(sim.gas.lel, 0)}% LEL, O2 ${fmt(sim.gas.o2)}%`, sx1 + 10, GY + 28); }
   // depth ruler
-  g.fillStyle = '#8aa0b6'; g.font = '10px system-ui'; g.strokeStyle = '#2b3a4a'; g.lineWidth = 1;
+  g.fillStyle = '#5b6b82'; g.font = '10px system-ui'; g.strokeStyle = '#9aa9bf'; g.lineWidth = 1;
   for (let d = 0; d <= sim.well.depthM; d += 5) { g.beginPath(); g.moveTo(sx1, m(d)); g.lineTo(sx1 + 8, m(d)); g.stroke(); g.fillText(`${d} m`, sx1 + 12, m(d) + 4); }
   g.fillStyle = '#8ec9ff'; g.fillText('water', sx0 + 4, m(sim.well.waterAtM) + 12);
-  if (sim.well.depthM > P.ropeRatingM) { g.strokeStyle = '#ff6b6b'; g.setLineDash([5, 4]); g.beginPath(); g.moveTo(sx0 - 12, m(P.ropeRatingM)); g.lineTo(sx1 + 70, m(P.ropeRatingM)); g.stroke(); g.setLineDash([]); g.fillStyle = '#ff9b9b'; g.fillText(`rope rating ${P.ropeRatingM} m`, sx1 + 12, m(P.ropeRatingM) - 4); }
+  if (sim.well.depthM > P.ropeRatingM) { g.strokeStyle = '#ff6b6b'; g.setLineDash([5, 4]); g.beginPath(); g.moveTo(sx0 - 12, m(P.ropeRatingM)); g.lineTo(sx1 + 70, m(P.ropeRatingM)); g.stroke(); g.setLineDash([]); g.fillStyle = '#c62828'; g.fillText(`rope rating ${P.ropeRatingM} m`, sx1 + 12, m(P.ropeRatingM) - 4); }
   // winch frame at the rim
   const anch = sim.robot.anchored;
   g.strokeStyle = anch ? '#ffb454' : '#5d6d7e'; g.lineWidth = 3; g.beginPath(); g.moveTo(sx0 - 14, GY); g.lineTo(wx, GY - 60); g.lineTo(sx1 + 14, GY); g.moveTo(wx, GY - 60); g.lineTo(wx, GY - 60); g.stroke();
@@ -78,26 +79,26 @@ function draw() {
   const c = sim.casualty, r = sim.robot;
   const ropeY = m(r.ropeOutM);
   if (r.ropeOutM > 0 || ['LOWER', 'SECURE', 'HOIST'].includes(sim.mission.state)) {
-    g.strokeStyle = '#ffd08a'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx, GY - 60); g.lineTo(wx, ropeY); g.stroke();
+    g.strokeStyle = '#b86e00'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx, GY - 60); g.lineTo(wx, ropeY); g.stroke();
     g.fillStyle = '#c47a1e'; g.beginPath(); g.roundRect(wx - 16, ropeY - 4, 32, 10, 3); g.fill();
   }
   if (!c.delivered && !r.carrying && !c.inArms) {
     const cy = c.secured ? ropeY - 4 : m(c.posM);
     person(g, c.secured ? wx : wx - 22, cy, 1.1, c.alive ? 1 : 0.4);
-    g.fillStyle = '#fff'; g.font = 'bold 11px system-ui'; g.fillText(`C1 health ${Math.round(c.health)}`, (c.secured ? wx : wx - 22) + 20, cy + 4);
+    g.fillStyle = '#0f1f3d'; g.font = 'bold 11px system-ui'; g.fillText(`C1 health ${Math.round(c.health)}`, (c.secured ? wx : wx - 22) + 20, cy + 4);
     if (c.secured) { g.strokeStyle = '#c47a1e'; g.lineWidth = 3; g.beginPath(); g.moveTo(wx - 14, cy + 10); g.lineTo(wx + 14, cy + 10); g.stroke(); }
   }
-  if (sim.robot.fan) { g.save(); g.translate(sx1 + 30, GY - 16); g.rotate(now * 12); g.fillStyle = '#9fd3ff'; for (let i = 0; i < 3; i++) { g.rotate(2.09); g.fillRect(0, -2, 12, 4); } g.restore(); g.fillStyle = '#9fd3ff'; g.font = '10px system-ui'; g.fillText('fan', sx1 + 22, GY - 34); }
+  if (sim.robot.fan) { g.save(); g.translate(sx1 + 30, GY - 16); g.rotate(now * 12); g.fillStyle = '#2ed3a6'; for (let i = 0; i < 3; i++) { g.rotate(2.09); g.fillRect(0, -2, 12, 4); } g.restore(); g.fillStyle = '#2ed3a6'; g.font = '10px system-ui'; g.fillText('fan', sx1 + 22, GY - 34); }
   // robot (stays at the rim; walks from the safe zone)
   const rx = 20 + r.x * pxCell;
   if (r.inShaft) shaftRobot(g, wx, m, sim, now);
   robotSide(g, rx, GY, !!r.carrying, r.busy > 0);
   if (r.carrying) { person(g, rx + 26, GY - 62, 1, 1, '#2fbf7a'); }
-  g.fillStyle = '#fff'; g.font = '10px system-ui';
+  g.fillStyle = '#0f1f3d'; g.font = '10px system-ui';
   const tag = r.busy > 0 ? `${r.busyAction} ${r.busy}s` : sim.mission.state === 'CARRY' ? 'carrying' : sim.mission.state === 'WALK' ? 'walking to the well' : '';
   if (tag) g.fillText(tag, rx - 14, GY - 100);
-  if (c.delivered) { person(g, 20 + 1.5 * pxCell, GY - 16, 1, 1, '#2fbf7a'); g.fillStyle = '#7be0ab'; g.fillText('rescued', 8, GY - 34); }
-  g.fillStyle = '#8aa0b6'; g.font = '11px system-ui'; g.fillText('Adults who can hold a rope: sling from the rim. Children or unconscious: a tethered rescue pod goes down (concept).', 14, 22);
+  if (c.delivered) { person(g, 20 + 1.5 * pxCell, GY - 16, 1, 1, '#2fbf7a'); g.fillStyle = '#0f8f6a'; g.fillText('rescued', 8, GY - 34); }
+  g.fillStyle = '#5b6b82'; g.font = '11px system-ui'; g.fillText('Adults who can hold a rope: sling from the rim. Children or unconscious: a tethered rescue pod goes down (concept).', 14, 22);
   g.fillText(`Depth ${fmt(sim.well.depthM)} m   ·   winch rope rated ${P.ropeRatingM} m   ·   max hoist ${P.maxHoistSpeed} m/s`, 14, 40);
 }
 

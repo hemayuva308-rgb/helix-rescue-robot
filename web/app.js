@@ -47,7 +47,7 @@ function renderTabs() {
 }
 
 // ---------------------------------------------------------------- drawing
-const C = { void: '#070b10', floor: '#1b2733', wall: '#5d6d7e', door: '#3c5a44', exit: '#2e7d57', safe: '#12452f', water: [18, 60, 110], debris: '#5a4632', weir: '#7a2a2a' };
+const C = { void: '#eaf0f7', floor: '#ffffff', wall: '#27407a', door: '#bfeedd', exit: '#7fe0bf', safe: '#cdf6e8', water: [150, 198, 240], debris: '#cdbba0', weir: '#e6a3a3' };
 
 function draw() {
   const cv = $('map'), g = cv.getContext('2d');
@@ -58,17 +58,17 @@ function draw() {
     let col = C.void;
     if (t === T.FLOOR) col = C.floor; else if (t === T.WALL) col = C.wall; else if (t === T.DOOR) col = C.door; else if (t === T.EXIT) col = C.exit;
     else if (t === T.SAFE) col = C.safe; else if (t === T.DEBRIS) col = C.debris; else if (t === T.WEIR) col = C.weir;
-    else if (t === T.WATER) { const d = sim.depth[i]; col = `rgb(${C.water[0] + d * 6},${C.water[1] + d * 18},${C.water[2] + d * 40})`; }
+    else if (t === T.WATER) { const d = sim.depth[i]; col = `rgb(${C.water[0] - d * 12},${C.water[1] - d * 16},${C.water[2] - d * 8})`; }
     g.fillStyle = col; g.fillRect(x * CELL, y * CELL, CELL, CELL);
     if (t === T.DEBRIS) {
       const w = sim.weight[i];
-      g.fillStyle = w > sim.params.liftLimitKg ? '#b04a3a' : w > 55 ? '#8a6a45' : '#6f573c';
+      g.fillStyle = w > sim.params.liftLimitKg ? '#d98a7a' : w > 55 ? '#b79a74' : '#c4ad8c';
       g.fillRect(x * CELL + 2, y * CELL + 2, CELL - 4, CELL - 4);
-      if (w > sim.params.liftLimitKg) { g.strokeStyle = '#ffb4a5'; g.beginPath(); g.moveTo(x * CELL + 3, y * CELL + 3); g.lineTo(x * CELL + CELL - 3, y * CELL + CELL - 3); g.stroke(); }
+      if (w > sim.params.liftLimitKg) { g.strokeStyle = '#a33'; g.beginPath(); g.moveTo(x * CELL + 3, y * CELL + 3); g.lineTo(x * CELL + CELL - 3, y * CELL + CELL - 3); g.stroke(); }
     }
     if (t === T.WATER && sim.scenario === 'water') {
       const cur = Math.abs(sim.curY[i]);
-      if ((x + y) % 3 === 0) { g.strokeStyle = `rgba(160,210,255,${Math.min(0.6, cur * 0.45)})`; g.beginPath(); g.moveTo(x * CELL + CELL / 2, y * CELL + 4); g.lineTo(x * CELL + CELL / 2, y * CELL + CELL - 4); g.stroke(); }
+      if ((x + y) % 3 === 0) { g.strokeStyle = `rgba(30,80,160,${Math.min(0.5, cur * 0.4)})`; g.beginPath(); g.moveTo(x * CELL + CELL / 2, y * CELL + 4); g.lineTo(x * CELL + CELL / 2, y * CELL + CELL - 4); g.stroke(); }
     }
     if (sim.scenario === 'fire') {
       const f = sim.fireI[i], sm = sim.smoke[i];
@@ -79,40 +79,40 @@ function draw() {
     }
   }
   // grid for walls readability
-  g.strokeStyle = 'rgba(255,255,255,0.03)'; for (let x = 0; x <= W; x++) { g.beginPath(); g.moveTo(x * CELL, 0); g.lineTo(x * CELL, H * CELL); g.stroke(); }
+  g.strokeStyle = 'rgba(18,48,107,0.07)'; for (let x = 0; x <= W; x++) { g.beginPath(); g.moveTo(x * CELL, 0); g.lineTo(x * CELL, H * CELL); g.stroke(); }
   // safe zone label
-  g.fillStyle = '#7be0ab'; g.font = '11px system-ui'; for (const z of sim.sc.safeZones) g.fillText('SAFE ZONE', z.x0 * CELL + 3, z.y0 * CELL + 12);
+  g.fillStyle = '#0f8f6a'; g.font = 'bold 11px system-ui'; for (const z of sim.sc.safeZones) g.fillText('SAFE ZONE', z.x0 * CELL + 3, z.y0 * CELL + 12);
   // path + trail
   const r = sim.robot;
-  g.strokeStyle = 'rgba(53,208,230,0.35)'; g.lineWidth = 2; g.beginPath();
+  g.strokeStyle = 'rgba(46,211,166,0.75)'; g.lineWidth = 2; g.beginPath();
   r.trail.forEach((p, i) => { const px = p.x * CELL + CELL / 2, py = p.y * CELL + CELL / 2; i ? g.lineTo(px, py) : g.moveTo(px, py); }); g.stroke();
-  if (sim.mission.path?.length) { g.setLineDash([4, 4]); g.strokeStyle = 'rgba(255,255,255,0.6)'; g.beginPath(); g.moveTo(r.x * CELL + CELL / 2, r.y * CELL + CELL / 2); for (const p of sim.mission.path) g.lineTo(p.x * CELL + CELL / 2, p.y * CELL + CELL / 2); g.stroke(); g.setLineDash([]); }
+  if (sim.mission.path?.length) { g.setLineDash([4, 4]); g.strokeStyle = 'rgba(18,48,107,0.6)'; g.beginPath(); g.moveTo(r.x * CELL + CELL / 2, r.y * CELL + CELL / 2); for (const p of sim.mission.path) g.lineTo(p.x * CELL + CELL / 2, p.y * CELL + CELL / 2); g.stroke(); g.setLineDash([]); }
   g.lineWidth = 1;
   // detections (rings disappear once that person has been picked up)
   for (const c of sim.candidates) {
     if (c.handled) continue;
-    const col = c.status === 'verified' ? '#4cd694' : c.status === 'rejected' ? '#8aa0b6' : '#ffb454';
+    const col = c.status === 'verified' ? '#0f9d6e' : c.status === 'rejected' ? '#8a97ab' : '#d98200';
     g.strokeStyle = col; g.setLineDash(c.status === 'verified' ? [] : [3, 3]); g.lineWidth = 2;
     g.beginPath(); g.arc(c.x * CELL + CELL / 2, c.y * CELL + CELL / 2, CELL * 0.8, 0, 7); g.stroke(); g.setLineDash([]);
     g.fillStyle = col; g.font = '10px system-ui'; g.fillText(`#${c.id}`, c.x * CELL + CELL * 1.2, c.y * CELL - 2);
   }
-  if (truth) for (const d of sim.decoys) { g.fillStyle = '#ffb454aa'; g.fillRect(d.x * CELL + 4, d.y * CELL + 4, CELL - 8, CELL - 8); g.fillStyle = '#fff'; g.font = '9px system-ui'; g.fillText('decoy', d.x * CELL - 4, d.y * CELL - 2); }
+  if (truth) for (const d of sim.decoys) { g.fillStyle = '#ffb454aa'; g.fillRect(d.x * CELL + 4, d.y * CELL + 4, CELL - 8, CELL - 8); g.fillStyle = '#0f1f3d'; g.font = '9px system-ui'; g.fillText('decoy', d.x * CELL - 4, d.y * CELL - 2); }
   // people: one head per person still at the scene. Dim = not found yet, bright = found. Picked-up people disappear from the scene.
   const found = sim.casualties.filter((c) => c.alive && !c.delivered && !c.aboard && !c.referred && c.verifiedOnce).map((c) => ({ c, tt: sim.timeToHazard(c) })).sort((p, q) => p.tt - q.tt);
   for (const c of sim.casualties) {
     if (c.delivered || c.aboard) continue;
     const px = Math.round(c.fx) * CELL + CELL / 2, py = Math.round(c.fy) * CELL + CELL / 2;
-    if (!c.alive) { drawPerson(g, px, py, { alpha: 0.5, skin: '#777', shirt: '#444', animal: c.animal }); g.fillStyle = '#999'; g.font = '10px system-ui'; g.fillText(`${c.id} lost`, px + 12, py + 4); continue; }
+    if (!c.alive) { drawPerson(g, px, py, { alpha: 0.5, skin: '#777', shirt: '#444', animal: c.animal }); g.fillStyle = '#667'; g.font = '10px system-ui'; g.fillText(`${c.id} lost`, px + 12, py + 4); continue; }
     const isFound = c.verifiedOnce;
     drawPerson(g, px, py, { alpha: isFound ? 1 : 0.3, animal: c.animal });
-    g.font = 'bold 10px system-ui'; g.fillStyle = isFound ? '#fff' : '#8aa0b6';
-    if (isFound) { const rank = found.findIndex((f) => f.c === c) + 1; g.fillText(`${c.id}${sim.multi ? ' health ' + Math.round(c.health) : ''}`, px - 12, py + 24); if (sim.multi && found.length > 1 && !c.referred) { g.fillStyle = rank === 1 ? '#ff6b6b' : '#ffd08a'; g.fillText(`rescue #${rank}`, px - 12, py - 14); } }
+    g.font = 'bold 10px system-ui'; g.fillStyle = isFound ? '#0f1f3d' : '#6b7a92';
+    if (isFound) { const rank = found.findIndex((f) => f.c === c) + 1; g.fillText(`${c.id}${sim.multi ? ' health ' + Math.round(c.health) : ''}`, px - 12, py + 24); if (sim.multi && found.length > 1 && !c.referred) { g.fillStyle = rank === 1 ? '#d32f2f' : '#b86e00'; g.fillText(`rescue #${rank}`, px - 12, py - 14); } }
     else g.fillText('not found yet', px - 24, py + 24);
   }
   // rescued people stand in the safe zone, in the order they were delivered
   const sz = sim.sc.safeZones[0]; let k = 0;
   for (const c of sim.casualties) if (c.delivered) { drawPerson(g, sz.x0 * CELL + 14 + (k % 3) * 22, sz.y0 * CELL + 34 + Math.floor(k / 3) * 26, { skin: '#e0bc9f', shirt: '#2fbf7a', animal: c.animal }); k++; }
-  if (k) { g.fillStyle = '#7be0ab'; g.font = 'bold 10px system-ui'; g.fillText(`rescued ${k}`, sz.x0 * CELL + 3, sz.y0 * CELL + 24); }
+  if (k) { g.fillStyle = '#0f8f6a'; g.font = 'bold 10px system-ui'; g.fillText(`rescued ${k}`, sz.x0 * CELL + 3, sz.y0 * CELL + 24); }
   // robot (humanoid, seen from above: head, shoulders, arms; swims when the water is deep)
   const rx = r.x * CELL + CELL / 2, ry = r.y * CELL + CELL / 2;
   for (const u of sim.units) drawRobot(g, u, u.robot.x * CELL + CELL / 2, u.robot.y * CELL + CELL / 2);
@@ -132,16 +132,16 @@ function effects(g, r, rx, ry) {
   if (searching) {
     for (const k of [0, 0.5]) {
       const ph = (now * 0.5 + k) % 1;
-      g.strokeStyle = `rgba(53,208,230,${0.45 * (1 - ph)})`; g.lineWidth = 2; g.beginPath(); g.arc(rx, ry, ph * cfg.thermal.range * CELL, 0, 7); g.stroke();
+      g.strokeStyle = `rgba(15,143,106,${0.55 * (1 - ph)})`; g.lineWidth = 2; g.beginPath(); g.arc(rx, ry, ph * cfg.thermal.range * CELL, 0, 7); g.stroke();
     }
-    g.fillStyle = 'rgba(53,208,230,0.9)'; g.font = '10px system-ui'; g.fillText('scanning: heat camera + microphones + radar', rx + 14, ry + 22);
+    g.fillStyle = '#0b7f66'; g.font = 'bold 10px system-ui'; g.fillText('scanning: heat camera + microphones + radar', rx + 14, ry + 22);
   }
   for (const c of sim.casualties) {
     if (!c.alive || c.aboard || c.delivered) continue;
     const cx = Math.round(c.fx) * CELL + CELL / 2, cy = Math.round(c.fy) * CELL + CELL / 2, d = Math.hypot(sim.robot.x - c.fx, sim.robot.y - c.fy);
     if (c.conscious && d <= cfg.sound.range) { // person calling for help: sound rings the robot can hear
       for (const k of [0, 0.33, 0.66]) { const ph = (now * 0.7 + k) % 1; g.strokeStyle = `rgba(255,95,162,${0.7 * (1 - ph)})`; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, 6 + ph * 34, 0, 7); g.stroke(); }
-      g.fillStyle = '#ff9bc8'; g.font = '10px system-ui'; g.fillText('calling for help (voice heard)', cx + 12, cy + 24);
+      g.fillStyle = '#c2185b'; g.font = 'bold 10px system-ui'; g.fillText('calling for help (voice heard)', cx + 12, cy + 24);
     } else if (!c.conscious && d <= cfg.sound.range) { // unconscious: silent, found by heat + breathing + radar at close range
       if (d <= cfg.thermal.range) { const a = 0.25 + 0.2 * Math.sin(now * 3); g.fillStyle = `rgba(255,150,60,${a})`; g.beginPath(); g.arc(cx, cy, 15, 0, 7); g.fill(); g.fillStyle = '#ffc48a'; g.font = '10px system-ui'; g.fillText('unconscious: heat + breathing signature', cx - 60, cy + 38); }
     }
@@ -153,22 +153,22 @@ function effects(g, r, rx, ry) {
     const all = Object.keys(c.hits).map((k) => SENSE_LABEL[k]);
     const txt = (names.length ? names : all).join(' + ') + (c.status === 'verified' ? ' VERIFIED' : c.status === 'rejected' ? ' = decoy' : ' ?');
     const px = Math.min(c.x * CELL + CELL * 1.2, sim.W * CELL - 150), py = c.y * CELL + 12; g.font = '9px system-ui'; const w = g.measureText(txt).width + 6;
-    g.fillStyle = 'rgba(8,14,22,0.8)'; g.fillRect(px - 3, py - 9, w, 12); g.fillStyle = c.status === 'verified' ? '#7be0ab' : c.status === 'rejected' ? '#8aa0b6' : '#ffd08a'; g.fillText(txt, px, py);
+    g.fillStyle = 'rgba(255,255,255,0.92)'; g.fillRect(px - 3, py - 9, w, 12); g.fillStyle = c.status === 'verified' ? '#0f8f6a' : c.status === 'rejected' ? '#6b7a92' : '#9a5b00'; g.fillText(txt, px, py);
   }
   if (sim.transit && sim.lastTransitT >= sim.t - 1 && st !== 'HARVEST') { // charging while swimming or towing
-    g.strokeStyle = '#ffe36b'; g.lineWidth = 1.5; g.beginPath();
+    g.strokeStyle = '#e6a800'; g.lineWidth = 1.5; g.beginPath();
     for (let i = 0; i < 3; i++) { const a = now * 4 + i * 2.1, x0 = rx + Math.cos(a) * 26, y0 = ry + Math.sin(a) * 26; g.moveTo(x0, y0); g.lineTo((x0 + rx) / 2 + 3 * Math.sin(now * 25 + i), (y0 + ry) / 2); g.lineTo(rx, ry); }
     g.stroke(); g.lineWidth = 1;
-    g.fillStyle = '#ffe36b'; g.font = 'bold 10px system-ui'; g.fillText(`charging while ${sim.robot.carrying ? 'towing' : 'moving'}  (+${fmt(sim.transitTotal)}%)`, rx - 60, ry + 40);
+    g.fillStyle = '#9a6a00'; g.font = 'bold 10px system-ui'; g.fillText(`charging while ${sim.robot.carrying ? 'towing' : 'moving'}  (+${fmt(sim.transitTotal)}%)`, rx - 60, ry + 40);
   }
   // energy harvesting: visible only when the unit is really harvesting
   if (st === 'HARVEST') {
     const water = sim.scenario === 'water', col = water ? '120,200,255' : '255,170,60';
     for (let i = 0; i < 3; i++) { const ph = (now * 0.8 + i / 3) % 1; g.strokeStyle = `rgba(${col},${0.6 * (1 - ph)})`; g.lineWidth = 2; g.beginPath(); g.arc(rx, ry, 10 + ph * 26, 0, 7); g.stroke(); }
-    g.strokeStyle = '#ffe36b'; g.lineWidth = 2; g.beginPath();
+    g.strokeStyle = '#e6a800'; g.lineWidth = 2; g.beginPath();
     for (let i = 0; i < 4; i++) { const a = now * 3 + i * 1.57, x0 = rx + Math.cos(a) * 24, y0 = ry + Math.sin(a) * 24; g.moveTo(x0, y0); g.lineTo((x0 + rx) / 2 + 3 * Math.sin(now * 20 + i), (y0 + ry) / 2); g.lineTo(rx, ry); }
     g.stroke(); g.lineWidth = 1;
-    g.fillStyle = '#ffe36b'; g.font = 'bold 11px system-ui'; g.fillText(`charging from ${water ? 'flowing water' : 'heat'}  +${fmt(sim.harvestedTotal)}%`, rx - 70, ry - 34);
+    g.fillStyle = '#9a6a00'; g.font = 'bold 11px system-ui'; g.fillText(`charging from ${water ? 'flowing water' : 'heat'}  +${fmt(sim.harvestedTotal)}%`, rx - 70, ry - 34);
   }
 }
 
@@ -199,7 +199,7 @@ function drawAlarms(g) {
     if (sim.t - al.t > 40) continue;
     const x = al.x * CELL + CELL / 2, y = al.y * CELL + CELL / 2, human = al.kind === 'human', col = human ? '255,70,70' : '90,200,255';
     for (const k of [0, 0.5]) { const ph = (now * 0.9 + k) % 1; g.strokeStyle = `rgba(${col},${0.8 * (1 - ph)})`; g.lineWidth = 3; g.beginPath(); g.arc(x, y, 14 + ph * 36, 0, 7); g.stroke(); }
-    g.fillStyle = human ? '#ff5a5a' : '#6fd0ff'; g.font = 'bold 11px system-ui'; g.fillText(human ? `HELP: ${al.need}` : `${al.unit} calls ${al.need}`, x + 18, y - 22);
+    g.fillStyle = human ? '#d32f2f' : '#1565c0'; g.font = 'bold 11px system-ui'; g.fillText(human ? `HELP: ${al.need}` : `${al.unit} calls ${al.need}`, x + 18, y - 22);
   }
 }
 
@@ -207,7 +207,7 @@ function robotMode(rr = sim.robot) {
   const d = sim.depthAt(rr.x, rr.y);
   return d > RATING.wadeM ? 'swimming' : d > 0.15 ? 'wading' : 'walking';
 }
-const UNIT_COLOR = { A: '#3b82c4', B: '#8b5cf6', C: '#d97706' };
+const UNIT_COLOR = { A: '#12306b', B: '#6d4fd8', C: '#d97706' };
 function drawRobot(g, u, rx, ry) {
   const r = u.robot, now = performance.now() / 1000, mode = robotMode(r), temp = sim.tempAt(r.x, r.y);
   const ui = (u.ui ??= { heading: 0, lastPos: null });
@@ -217,8 +217,8 @@ function drawRobot(g, u, rx, ry) {
   g.save(); g.translate(rx, ry); g.scale(1.7, 1.7); g.rotate(heading);
   const sw = mode === 'swimming', stroke = sw ? Math.sin(now * 5) : 0;
   if (sw) { // ripples + wake
-    for (const k of [0, 0.5]) { const ph = (now * 0.9 + k) % 1; g.strokeStyle = `rgba(190,230,255,${0.6 * (1 - ph)})`; g.lineWidth = 1.5; g.beginPath(); g.ellipse(0, 0, 12 + ph * 14, 9 + ph * 11, 0, 0, 7); g.stroke(); }
-    g.strokeStyle = 'rgba(190,230,255,0.35)'; g.beginPath(); g.moveTo(-10, -4); g.lineTo(-26, -9); g.moveTo(-10, 4); g.lineTo(-26, 9); g.stroke();
+    for (const k of [0, 0.5]) { const ph = (now * 0.9 + k) % 1; g.strokeStyle = `rgba(255,255,255,${0.9 * (1 - ph)})`; g.lineWidth = 1.5; g.beginPath(); g.ellipse(0, 0, 12 + ph * 14, 9 + ph * 11, 0, 0, 7); g.stroke(); }
+    g.strokeStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.moveTo(-10, -4); g.lineTo(-26, -9); g.moveTo(-10, 4); g.lineTo(-26, 9); g.stroke();
   }
   // cradle-carried casualty (mannequin): body across the arms, head to the robot's left
   if (r.carrying) {
@@ -228,20 +228,20 @@ function drawRobot(g, u, rx, ry) {
     g.fillStyle = '#273449'; g.beginPath(); g.roundRect(7, 12, 7, 12, 3); g.fill();
   }
   // arms
-  g.strokeStyle = '#2a6fb0'; g.lineWidth = 4; g.lineCap = 'round';
+  g.strokeStyle = '#1e4aa8'; g.lineWidth = 4; g.lineCap = 'round';
   const reach = r.carrying ? 15 : sw ? 12 + 6 * stroke : 6 + 2 * Math.sin(now * 4);
   g.beginPath(); g.moveTo(0, -9); g.lineTo(reach, -10 + (sw ? 3 * stroke : 0)); g.moveTo(0, 9); g.lineTo(reach, 10 - (sw ? 3 * stroke : 0)); g.stroke();
   // shoulders / torso
   g.fillStyle = r.busy > 0 ? '#d99a3a' : (UNIT_COLOR[u.id] ?? '#3b82c4'); g.beginPath(); g.ellipse(-1, 0, 6.5, 11.5, 0, 0, 7); g.fill();
-  g.strokeStyle = '#9fd3ff'; g.lineWidth = 1; g.stroke();
+  g.strokeStyle = '#2ed3a6'; g.lineWidth = 1.5; g.stroke();
   // head with visor
   g.fillStyle = '#cfe3f5'; g.beginPath(); g.arc(1, 0, 6, 0, 7); g.fill();
-  g.fillStyle = '#12c4e0'; g.beginPath(); g.ellipse(4, 0, 2.6, 4.4, 0, 0, 7); g.fill();
+  g.fillStyle = '#2ed3a6'; g.beginPath(); g.ellipse(4, 0, 2.6, 4.4, 0, 0, 7); g.fill();
   g.restore();
   if (sw) { g.fillStyle = 'rgba(30,100,170,0.38)'; g.beginPath(); g.arc(rx, ry, 22, 0, 7); g.fill(); } // body under the surface: only head, shoulders and arm strokes show
-  g.fillStyle = '#fff'; g.font = '10px system-ui';
+  g.fillStyle = '#0f1f3d'; g.font = 'bold 10px system-ui';
   const tag = r.busy > 0 ? `${r.busyAction} ${r.busy}s` : sw ? (r.carrying ? 'swimming, towing' : 'swimming') : mode === 'wading' ? 'wading' : r.carrying ? 'carrying' : '';
-  if (sim.fleet) { g.fillStyle = UNIT_COLOR[u.id]; g.font = 'bold 12px system-ui'; g.fillText(u.id, rx - 4, ry - 30); g.fillStyle = '#fff'; g.font = '10px system-ui'; }
+  if (sim.fleet) { g.fillStyle = UNIT_COLOR[u.id]; g.font = 'bold 12px system-ui'; g.fillText(u.id, rx - 4, ry - 30); g.fillStyle = '#0f1f3d'; g.font = 'bold 10px system-ui'; }
   if (tag) g.fillText(tag, rx + 24, ry - 22);
 }
 
@@ -250,15 +250,15 @@ function drawRobot(g, u, rx, ry) {
 function depthGauge(depth, mode) {
   const H = 150, top = 10, perM = (H - top) / 5, y = (m) => top + m * perM, d = Math.min(depth, 5);
   return `<svg viewBox="0 0 370 ${H + 14}" width="100%" role="img" aria-label="Depth gauge" style="margin-bottom:6px">
-    <rect x="70" y="${y(0)}" width="150" height="${y(5) - y(0)}" fill="#0b1118" stroke="#223244"/>
-    <rect x="70" y="${y(0)}" width="150" height="${y(d) - y(0)}" fill="#1b5f9e" opacity=".55"/>
-    <rect x="70" y="${y(2.5)}" width="150" height="${y(5) - y(2.5)}" fill="#7a2a2a" opacity=".35"/>
-    <line x1="64" x2="226" y1="${y(1)}" y2="${y(1)}" stroke="#7be0ab" stroke-dasharray="4 3"/><text x="230" y="${y(1) + 4}" fill="#7be0ab" font-size="10">wade limit 1.0 m</text>
-    <line x1="64" x2="226" y1="${y(2.5)}" y2="${y(2.5)}" stroke="#ff6b6b" stroke-width="2"/><text x="230" y="${y(2.5) + 4}" fill="#ff9b9b" font-size="10">swim limit 2.5 m</text>
-    <text x="74" y="${y(3.8)}" fill="#ff9b9b" font-size="10">refused: divers / rope team</text>
-    <circle cx="145" cy="${y(Math.max(0.15, d))}" r="7" fill="#cfe3f5" stroke="#12c4e0" stroke-width="2"/>
-    <text x="4" y="${y(0) + 4}" fill="#8aa0b6" font-size="10">0 m</text><text x="4" y="${y(5) + 4}" fill="#8aa0b6" font-size="10">5 m</text>
-    <text x="4" y="${y(Math.max(0.15, d)) + 4}" fill="#fff" font-size="10" font-weight="bold">${depth.toFixed(1)} m</text>
+    <rect x="70" y="${y(0)}" width="150" height="${y(5) - y(0)}" fill="#f1f6fb" stroke="#d6e0ec"/>
+    <rect x="70" y="${y(0)}" width="150" height="${y(d) - y(0)}" fill="#7fb4ea" opacity=".7"/>
+    <rect x="70" y="${y(2.5)}" width="150" height="${y(5) - y(2.5)}" fill="#f3b9b9" opacity=".55"/>
+    <line x1="64" x2="226" y1="${y(1)}" y2="${y(1)}" stroke="#0f8f6a" stroke-dasharray="4 3"/><text x="230" y="${y(1) + 4}" fill="#0f8f6a" font-size="10">wade limit 1.0 m</text>
+    <line x1="64" x2="226" y1="${y(2.5)}" y2="${y(2.5)}" stroke="#d32f2f" stroke-width="2"/><text x="230" y="${y(2.5) + 4}" fill="#c62828" font-size="10">swim limit 2.5 m</text>
+    <text x="74" y="${y(3.8)}" fill="#c62828" font-size="10">refused: divers / rope team</text>
+    <circle cx="145" cy="${y(Math.max(0.15, d))}" r="7" fill="#12306b" stroke="#2ed3a6" stroke-width="2"/>
+    <text x="4" y="${y(0) + 4}" fill="#5b6b82" font-size="10">0 m</text><text x="4" y="${y(5) + 4}" fill="#5b6b82" font-size="10">5 m</text>
+    <text x="4" y="${y(Math.max(0.15, d)) + 4}" fill="#0f1f3d" font-size="10" font-weight="bold">${depth.toFixed(1)} m</text>
   </svg>`;
 }
 

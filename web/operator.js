@@ -14,7 +14,7 @@ const q = new URLSearchParams(location.search);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const fmt = (n, d = 1) => Number(n).toFixed(d);
 const SEEDS = { fire: 4, water: 4, collapse: 4, well: 3 };
-const UCOL = { A: '#3b82c4', B: '#8b5cf6', C: '#d97706' };
+const UCOL = { A: '#12306b', B: '#6d4fd8', C: '#d97706' };
 
 let mode = 'local', sim = null, deployed = false, held = false, speed = 2, acc = 0, last = 0, alarmSeen = 0, logN = 0;
 let pendingCmd = 0, pingAt = 0, vm = null, hello = null, link = null, lastMsg = 0, code = '', via = '', net = '';
@@ -55,26 +55,26 @@ function actLink(up) { if (mode === 'remote') { link.send({ t: 'link', up }); re
 
 // ---------------------------------------------------------------- drawing
 function map(v) {
-  const cv = $('oMap'), g = cv.getContext('2d'), W = cv.width, H = cv.height; g.fillStyle = '#070b10'; g.fillRect(0, 0, W, H);
+  const cv = $('oMap'), g = cv.getContext('2d'), W = cv.width, H = cv.height; g.fillStyle = '#eef3f9'; g.fillRect(0, 0, W, H);
   if (v.scn === 'well' && v.well) {
     const w = v.well, D = w.depthM, k = (H - 40) / Math.max(D, 10), gy = 40, wx = W * 0.6, hw = 34, ux = v.units[0]?.x ?? 0;
-    g.fillStyle = '#3a2f26'; g.fillRect(0, gy, W, H - gy); g.fillStyle = '#05080c'; g.fillRect(wx - hw, gy, hw * 2, D * k);
-    g.fillStyle = 'rgba(27,95,158,.75)'; g.fillRect(wx - hw, gy + w.waterAtM * k, hw * 2, (D - w.waterAtM) * k);
-    if (w.lel > 10) { g.fillStyle = 'rgba(190,220,80,.2)'; g.fillRect(wx - hw, gy, hw * 2, D * k); g.fillStyle = '#d8ef7a'; g.font = '11px system-ui'; g.fillText(`foul air: methane ${fmt(w.lel, 0)}% LEL`, wx + hw + 8, gy + 16); }
-    if (w.ropeOutM > 0) { g.strokeStyle = '#ffd08a'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx, gy - 20); g.lineTo(wx, gy + w.ropeOutM * k); g.stroke(); g.fillStyle = '#3b82c4'; g.beginPath(); g.roundRect(wx - 9, gy + w.ropeOutM * k - 4, 18, 22, 6); g.fill(); }
+    g.fillStyle = '#d9c9b0'; g.fillRect(0, gy, W, H - gy); g.fillStyle = '#1b2a4a'; g.fillRect(wx - hw, gy, hw * 2, D * k);
+    g.fillStyle = 'rgba(80,150,225,.8)'; g.fillRect(wx - hw, gy + w.waterAtM * k, hw * 2, (D - w.waterAtM) * k);
+    if (w.lel > 10) { g.fillStyle = 'rgba(190,220,80,.35)'; g.fillRect(wx - hw, gy, hw * 2, D * k); g.fillStyle = '#6b7a00'; g.font = '11px system-ui'; g.fillText(`foul air: methane ${fmt(w.lel, 0)}% LEL`, wx + hw + 8, gy + 16); }
+    if (w.ropeOutM > 0) { g.strokeStyle = '#ffd08a'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx, gy - 20); g.lineTo(wx, gy + w.ropeOutM * k); g.stroke(); g.fillStyle = '#12306b'; g.beginPath(); g.roundRect(wx - 9, gy + w.ropeOutM * k - 4, 18, 22, 6); g.fill(); g.fillStyle = '#2ed3a6'; g.fillRect(wx - 5, gy + w.ropeOutM * k, 10, 4); }
     if (w.found && !w.delivered) { g.fillStyle = '#e98a3c'; g.beginPath(); g.arc(w.secured ? wx : wx - 16, gy + (w.secured ? w.ropeOutM : w.posM) * k, 6, 0, 7); g.fill(); }
-    g.fillStyle = '#3b82c4'; g.fillRect(Math.min(wx - hw - 20, 20 + ux * 12), gy - 30, 8, 30); g.fillStyle = '#8aa0b6'; g.font = '11px system-ui'; g.fillText(`${fmt(D)} m deep · rope out ${fmt(w.ropeOutM)} m`, 8, 16);
+    g.fillStyle = '#12306b'; g.fillRect(Math.min(wx - hw - 20, 20 + ux * 12), gy - 30, 8, 30); g.fillStyle = '#5b6b82'; g.font = '11px system-ui'; g.fillText(`${fmt(D)} m deep · rope out ${fmt(w.ropeOutM)} m`, 8, 16);
     return;
   }
   if (!hello || !hello.grid) return;
   const C = Math.min(W / hello.W, H / hello.H), fire = new Map((v.fire ?? []).map((f) => [f[1] * hello.W + f[0], f[2]]));
   for (let y = 0; y < hello.H; y++) for (let x = 0; x < hello.W; x++) {
-    const i = y * hello.W + x, t = Number(hello.grid[i]); let col = '#070b10';
-    if (t === T.FLOOR) col = '#1b2733'; else if (t === T.WALL) col = '#5d6d7e'; else if (t === T.DOOR) col = '#3c5a44'; else if (t === T.EXIT) col = '#2e7d57'; else if (t === T.SAFE) col = '#12452f'; else if (t === T.DEBRIS) col = '#5a4632'; else if (t === T.WEIR) col = '#7a2a2a'; else if (t === T.WATER) col = '#14508f';
+    const i = y * hello.W + x, t = Number(hello.grid[i]); let col = '#eaf0f7';
+    if (t === T.FLOOR) col = '#ffffff'; else if (t === T.WALL) col = '#27407a'; else if (t === T.DOOR) col = '#bfeedd'; else if (t === T.EXIT) col = '#7fe0bf'; else if (t === T.SAFE) col = '#cdf6e8'; else if (t === T.DEBRIS) col = '#cdbba0'; else if (t === T.WEIR) col = '#e6a3a3'; else if (t === T.WATER) col = '#96c6f0';
     g.fillStyle = col; g.fillRect(x * C, y * C, C, C);
     const f = fire.get(i); if (f) { g.fillStyle = `rgba(255,${Math.round(150 - 100 * f)},30,${0.35 + 0.6 * f})`; g.fillRect(x * C, y * C, C, C); }
   }
-  for (const h of v.heads ?? []) { g.fillStyle = h[3] ? '#b07a45' : '#e98a3c'; g.beginPath(); g.arc((h[0] + 0.5) * C, (h[1] + 0.5) * C, C * 0.5, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `${Math.max(9, C * 0.6)}px system-ui`; g.fillText(h[2], (h[0] + 1) * C, h[1] * C); }
+  for (const h of v.heads ?? []) { g.fillStyle = h[3] ? '#b07a45' : '#e98a3c'; g.beginPath(); g.arc((h[0] + 0.5) * C, (h[1] + 0.5) * C, C * 0.5, 0, 7); g.fill(); g.fillStyle = '#0f1f3d'; g.font = `${Math.max(9, C * 0.6)}px system-ui`; g.fillText(h[2], (h[0] + 1) * C, h[1] * C); }
   for (const u of v.units) { g.fillStyle = UCOL[u.id]; g.beginPath(); g.arc((u.x + 0.5) * C, (u.y + 0.5) * C, C * 0.6, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `bold ${Math.max(9, C * 0.7)}px system-ui`; g.fillText(u.id, (u.x + 0.2) * C, (u.y + 0.95) * C); }
   const now = performance.now() / 1000;
   for (const a of v.alarms) { if (v.time - a.t > 40) continue; const ph = (now * 0.9) % 1; g.strokeStyle = a.kind === 'human' ? `rgba(255,70,70,${1 - ph})` : `rgba(90,200,255,${1 - ph})`; g.lineWidth = 2; g.beginPath(); g.arc((a.x + 0.5) * C, (a.y + 0.5) * C, C + ph * C * 3, 0, 7); g.stroke(); }
@@ -88,7 +88,7 @@ function render(v) {
   if (lastA) { al.style.display = ''; al.className = 'alarm ' + (lastA.kind === 'human' ? 'human' : 'unit'); al.innerHTML = lastA.kind === 'human' ? `<b>DISTRESS CALL</b> · t=${lastA.t}s · unit ${lastA.unit} needs <b>${esc(lastA.need)}</b><br><span>${esc(lastA.reason)}</span>` : `<b>UNIT-TO-UNIT HELP</b> · t=${lastA.t}s · unit ${lastA.unit} asks <b>${esc(lastA.need)}</b><br><span>${esc(lastA.reason)}</span>`; } else al.style.display = 'none';
   if (v.alarms.length > alarmSeen && $('chkSound').checked) playAlarm(v.alarms.slice(alarmSeen).some((x) => x.kind === 'human') ? 'human' : 'unit');
   alarmSeen = v.alarms.length;
-  $('oUnits').innerHTML = v.units.map((u) => { const b = Math.max(0, Math.min(100, u.battery)), col = b < 20 ? '#ff6b6b' : b < 40 ? '#ffb454' : '#4cd694'; return `<div class="row"><span><b style="color:${UCOL[u.id]}">Unit ${u.id}</b> · ${esc(u.label)}</span><span>${fmt(b)}%</span></div><div class="ubar"><div style="width:${b}%;background:${col}"></div></div>`; }).join('') + (v.harvested ? `<p class="note">Energy gathered from the environment so far: ${fmt(v.harvested)}%</p>` : '');
+  $('oUnits').innerHTML = v.units.map((u) => { const b = Math.max(0, Math.min(100, u.battery)), col = b < 20 ? '#d32f2f' : b < 40 ? '#e08a00' : '#2ed3a6'; return `<div class="row"><span><b style="color:${UCOL[u.id]}">Unit ${u.id}</b> · ${esc(u.label)}</span><span>${fmt(b)}%</span></div><div class="ubar"><div style="width:${b}%;background:${col}"></div></div>`; }).join('') + (v.harvested ? `<p class="note">Energy gathered from the environment so far: ${fmt(v.harvested)}%</p>` : '');
   const ap = $('oAppr'); const key = v.pending.map((a) => a.id).join('|'); if (ap.dataset.key !== key || !v.pending.length) {
     ap.dataset.key = key; ap.innerHTML = v.pending.length ? '' : '<p class="hint">Nothing waiting.</p>';
     for (const a of v.pending) { const d = document.createElement('div'); d.className = 'appr'; d.innerHTML = `<div><b>${a.role}</b>: ${esc(a.reason)}</div><div class="hint">answer in time or the units hold and call for help</div><div class="btns"><button class="ok">Approve</button><button class="no">Reject</button></div>`; d.querySelector('.ok').onclick = () => actApprove(a.id, true); d.querySelector('.no').onclick = () => actApprove(a.id, false); ap.appendChild(d); }
@@ -108,7 +108,7 @@ function frame(ts) {
     vm = snapshot(sim, $('inScn').value, { deployed, held });
   }
   render(vm);
-  if (mode === 'remote') $('pairStat').innerHTML = hello && Date.now() - lastMsg < 3500 ? `<b style="color:#7be0ab">linked to the laptop</b> · code ${code} · via ${via || 'link'}` : `looking for the laptop (code ${code})... ${esc(net)}`;
+  if (mode === 'remote') $('pairStat').innerHTML = hello && Date.now() - lastMsg < 3500 ? `<b style="color:#0f8f6a">linked to the laptop</b> · code ${code} · via ${via || 'link'}` : `looking for the laptop (code ${code})... ${esc(net)}`;
   requestAnimationFrame(frame);
 }
 

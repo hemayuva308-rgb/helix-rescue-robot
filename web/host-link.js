@@ -9,7 +9,7 @@ export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone,
   const card = document.createElement('div'); card.className = 'card'; card.id = 'phoneCard';
   card.innerHTML = `<h2>Operator phone <small>this laptop runs the simulation</small></h2>
     <div class="row"><span>Pairing code</span><b style="font-size:20px;letter-spacing:3px" id="pCode">${code}</b></div>
-    <div id="pQr" style="background:#fff;padding:6px;border-radius:8px;width:150px;margin:6px 0"></div>
+    <div id="pQr" style="background:#fff;padding:6px;border-radius:8px;width:150px;margin:6px 0;border:1px solid var(--line)"></div>
     <p class="hint">On the phone open <b>${location.host}/web/operator.html</b> and type the code, or scan the QR.</p>
     <div class="row"><span id="pStat" class="hint">waiting for the phone</span></div>
     <p class="hint" id="pLog"></p>
@@ -26,7 +26,7 @@ export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone,
   const link = createLink({ role: 'host', code, onStatus: (s) => { net = s; paint(); }, onMessage: handle });
   const connected = () => Date.now() - phoneSeen < 8000; // a phone silent for 8 s counts as a lost operator link: the units hold
   let wasConnected = false;
-  function paint() { const c = connected(); card.querySelector('#pStat').innerHTML = c ? `<b style="color:#7be0ab">phone connected</b> (via ${via || 'link'}) · ${got} messages${lastCmd ? ` · last command: "${lastCmd.replace(/[<>&]/g, '')}"` : ''}` : `waiting for the phone · ${net || 'starting'}${got ? ` (${got} messages received so far)` : ''}`; }
+  function paint() { const c = connected(); card.querySelector('#pStat').innerHTML = c ? `<b style="color:#0f8f6a">phone connected</b> (via ${via || 'link'}) · ${got} messages${lastCmd ? ` · last command: "${lastCmd.replace(/[<>&]/g, '')}"` : ''}` : `waiting for the phone · ${net || 'starting'}${got ? ` (${got} messages received so far)` : ''}`; }
   function sendHello() { const s = getSim(); if (s) link.send(makeHello(s, getScn())); helloSent = true; }
   function handle(m, v) {
     const sim = getSim(); if (!sim) return;
