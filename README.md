@@ -19,7 +19,7 @@ The long-term vision the decision layer is built for: a human-shaped, human-heig
 ## Run it
 
 ```bash
-node server.js            # http://localhost:8080  (no dependencies, Node 20+)
+node local-server.js      # http://localhost:8080  (no dependencies, Node 20+)
 npm test                  # 30 tests: gate rules, determinism, audit chain, injection, invariants, URDF model
 npm run eval              # 100 randomised runs per scenario -> eval/RESULTS.md and eval/results.json
 docker compose up         # same server in a container
@@ -64,7 +64,7 @@ src/urdf.js        URDF loader, forward kinematics, model statistics
 src/hal.js         hardware abstraction: gated actuator bus, simulated port, hardware placeholder (docs/HARDWARE_READY.md)
 robot/helix.urdf   the robot, described as code
 web/               dashboard (canvas + panels)
-server.js          static server + /api/alert + /api/brief
+local-server.js    static server + /api/alert + /api/brief
 eval/run.js        reproducible evaluation
 test/              node:test suite
 data/casualty_profiles.json   100 synthetic profiles

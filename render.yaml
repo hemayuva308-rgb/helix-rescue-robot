@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     buildCommand: "echo no build step"
-    startCommand: node server.js
+    startCommand: node local-server.js
     envVars:
       - key: PORT
         value: 8080

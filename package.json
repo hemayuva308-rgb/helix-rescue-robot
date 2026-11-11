@@ -4,7 +4,7 @@
   "description": "Helix Command: a decision layer for rescue robots (simulation prototype)",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "node local-server.js",
     "test": "node --test test/*.test.js",
     "eval": "node eval/run.js"
   },
