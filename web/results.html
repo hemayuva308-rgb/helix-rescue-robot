@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Helix Command: results</title>
+<link rel="icon" href="/web/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/web/style.css">
 <style>
   .wrap{max-width:980px;margin:0 auto;padding:20px}
@@ -19,9 +20,11 @@
 </head>
 <body>
 <header>
-  <div class="brand"><span class="logo">HX</span><div><h1>Helix Command</h1><p>Evaluation results (simulation)</p></div></div>
-  <div class="tabs"><a class="tab" href="/">&larr; Back to the dashboard</a></div>
+  <a class="brand" href="/web/index.html"><img class="logo" src="/web/logo.svg" alt="Helix Command logo"><div><h1>Helix Command</h1><p>Evaluation results (simulation)</p></div></a>
+  <nav class="menu"><span class="scn" id="tabs"><a class="tab" href="/web/index.html?scenario=fire">Fire</a><a class="tab" href="/web/index.html?scenario=water">Water</a><a class="tab" href="/web/index.html?scenario=collapse">Collapse</a></span><span class="sep"></span><a class="tab" href="/web/well.html">Well</a><a class="tab" href="/web/operator.html">Operator</a><a class="tab" href="/web/robot.html">Robot</a><a class="tab on" href="/web/results.html">Results</a></nav>
+  <span class="tag" title="Simulation prototype with synthetic data. Not a certified rescue system.">Simulation prototype</span>
 </header>
+<div class="status" id="banner" hidden></div>
 <div class="wrap">
   <p class="note" id="meta">Loading...</p>
   <h2>Randomised runs</h2>

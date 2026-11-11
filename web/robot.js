@@ -85,10 +85,10 @@ function draw(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   if (walking) { phase += dt * 2 * Math.PI * Number($('rCad').value) * 0.5; Object.assign(q, gaitPose(phase, true)); syncSliders(); }
   const bob = walking ? 0.012 * Math.cos(2 * phase) : 0;
-  g.fillStyle = '#f4f8fc'; g.fillRect(0, 0, cv.width, cv.height);
+  g.fillStyle = '#c9d8ec'; g.fillRect(0, 0, cv.width, cv.height);
   const c = camera();
   // ground grid (scrolls while walking)
-  g.strokeStyle = '#d3deec'; g.lineWidth = 1;
+  g.strokeStyle = '#a9bddb'; g.lineWidth = 1;
   const off = walking ? -((phase * 0.18) % 0.5) : 0;
   for (let i = -8; i <= 8; i++) {
     const a = project(c, [i * 0.5 + off, -4, 0]), b = project(c, [i * 0.5 + off, 4, 0]); if (a.z > 0.1 && b.z > 0.1) { g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); }
@@ -107,9 +107,9 @@ function draw(t) {
   for (const it of items) {
     g.beginPath(); it.P.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y))); g.closePath();
     const [r, gr, b] = it.color; g.fillStyle = `rgb(${Math.round(255 * r * it.shade)},${Math.round(255 * gr * it.shade)},${Math.round(255 * b * it.shade)})`; g.fill();
-    g.strokeStyle = 'rgba(15,31,61,0.28)'; g.lineWidth = 1; g.stroke();
+    g.strokeStyle = 'rgba(18,48,107,0.45)'; g.lineWidth = 1; g.stroke();
   }
-  g.fillStyle = '#5b6b82'; g.font = '14px system-ui'; g.fillText(walking ? 'Walking preview (kinematic)' : 'Pose preview', 16, 26);
+  g.fillStyle = '#12306b'; g.font = '14px system-ui'; g.fillText(walking ? 'Walking preview (kinematic)' : 'Pose preview', 16, 26);
   const s = modelStats(model, q);
   $('stats').innerHTML = [['Height', `${s.height.toFixed(2)} m (${(s.height * 3.281).toFixed(1)} ft)`], ['Mass (assumed)', `${s.mass.toFixed(0)} kg`], ['Centre of mass height', `${s.com[2].toFixed(2)} m`], ['Links / joints', `${model.links.size} / ${model.joints.length}`], ['Actuated joints', `${joints.length}`]].map(([k, v]) => `<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('');
   requestAnimationFrame(draw);

@@ -47,7 +47,7 @@ function renderTabs() {
 }
 
 // ---------------------------------------------------------------- drawing
-const C = { void: '#eaf0f7', floor: '#ffffff', wall: '#27407a', door: '#bfeedd', exit: '#7fe0bf', safe: '#cdf6e8', water: [150, 198, 240], debris: '#cdbba0', weir: '#e6a3a3' };
+const C = { void: '#eaf0f7', floor: '#ffffff', wall: '#27407a', door: '#c7d8f5', exit: '#a9c3f0', safe: '#dce8fb', water: [150, 198, 240], debris: '#cdbba0', weir: '#e6a3a3' };
 
 function draw() {
   const cv = $('map'), g = cv.getContext('2d');
@@ -81,17 +81,17 @@ function draw() {
   // grid for walls readability
   g.strokeStyle = 'rgba(18,48,107,0.07)'; for (let x = 0; x <= W; x++) { g.beginPath(); g.moveTo(x * CELL, 0); g.lineTo(x * CELL, H * CELL); g.stroke(); }
   // safe zone label
-  g.fillStyle = '#0f8f6a'; g.font = 'bold 11px system-ui'; for (const z of sim.sc.safeZones) g.fillText('SAFE ZONE', z.x0 * CELL + 3, z.y0 * CELL + 12);
+  g.fillStyle = '#12306b'; g.font = 'bold 11px system-ui'; for (const z of sim.sc.safeZones) g.fillText('SAFE ZONE', z.x0 * CELL + 3, z.y0 * CELL + 12);
   // path + trail
   const r = sim.robot;
-  g.strokeStyle = 'rgba(46,211,166,0.75)'; g.lineWidth = 2; g.beginPath();
+  g.strokeStyle = 'rgba(47,91,183,0.75)'; g.lineWidth = 2; g.beginPath();
   r.trail.forEach((p, i) => { const px = p.x * CELL + CELL / 2, py = p.y * CELL + CELL / 2; i ? g.lineTo(px, py) : g.moveTo(px, py); }); g.stroke();
   if (sim.mission.path?.length) { g.setLineDash([4, 4]); g.strokeStyle = 'rgba(18,48,107,0.6)'; g.beginPath(); g.moveTo(r.x * CELL + CELL / 2, r.y * CELL + CELL / 2); for (const p of sim.mission.path) g.lineTo(p.x * CELL + CELL / 2, p.y * CELL + CELL / 2); g.stroke(); g.setLineDash([]); }
   g.lineWidth = 1;
   // detections (rings disappear once that person has been picked up)
   for (const c of sim.candidates) {
     if (c.handled) continue;
-    const col = c.status === 'verified' ? '#0f9d6e' : c.status === 'rejected' ? '#8a97ab' : '#d98200';
+    const col = c.status === 'verified' ? '#1d4ed8' : c.status === 'rejected' ? '#8a97ab' : '#d98200';
     g.strokeStyle = col; g.setLineDash(c.status === 'verified' ? [] : [3, 3]); g.lineWidth = 2;
     g.beginPath(); g.arc(c.x * CELL + CELL / 2, c.y * CELL + CELL / 2, CELL * 0.8, 0, 7); g.stroke(); g.setLineDash([]);
     g.fillStyle = col; g.font = '10px system-ui'; g.fillText(`#${c.id}`, c.x * CELL + CELL * 1.2, c.y * CELL - 2);
@@ -111,15 +111,15 @@ function draw() {
   }
   // rescued people stand in the safe zone, in the order they were delivered
   const sz = sim.sc.safeZones[0]; let k = 0;
-  for (const c of sim.casualties) if (c.delivered) { drawPerson(g, sz.x0 * CELL + 14 + (k % 3) * 22, sz.y0 * CELL + 34 + Math.floor(k / 3) * 26, { skin: '#e0bc9f', shirt: '#2fbf7a', animal: c.animal }); k++; }
-  if (k) { g.fillStyle = '#0f8f6a'; g.font = 'bold 10px system-ui'; g.fillText(`rescued ${k}`, sz.x0 * CELL + 3, sz.y0 * CELL + 24); }
+  for (const c of sim.casualties) if (c.delivered) { drawPerson(g, sz.x0 * CELL + 14 + (k % 3) * 22, sz.y0 * CELL + 34 + Math.floor(k / 3) * 26, { skin: '#e0bc9f', shirt: '#2f5bb7', animal: c.animal }); k++; }
+  if (k) { g.fillStyle = '#12306b'; g.font = 'bold 10px system-ui'; g.fillText(`rescued ${k}`, sz.x0 * CELL + 3, sz.y0 * CELL + 24); }
   // robot (humanoid, seen from above: head, shoulders, arms; swims when the water is deep)
   const rx = r.x * CELL + CELL / 2, ry = r.y * CELL + CELL / 2;
   for (const u of sim.units) drawRobot(g, u, u.robot.x * CELL + CELL / 2, u.robot.y * CELL + CELL / 2);
   drawAlarms(g);
   effects(g, r, rx, ry);
   // legend
-  $('legend').innerHTML = [['#35d0e6', 'Helix unit'], ['#e98a3c', 'person (dim = not found yet)'], ['#2fbf7a', 'rescued, in safe zone'], ['#ffb454', 'unverified detection'], ['#ff7a28', sim.scenario === 'fire' ? 'fire & heat' : sim.scenario === 'water' ? 'current (lines)' : 'debris (red slash = too heavy)']].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
+  $('legend').innerHTML = [['#12306b', 'Helix unit'], ['#e98a3c', 'person (dim = not found yet)'], ['#2f5bb7', 'rescued, in safe zone'], ['#ffb454', 'unverified detection'], ['#ff7a28', sim.scenario === 'fire' ? 'fire & heat' : sim.scenario === 'water' ? 'current (lines)' : 'debris (red slash = too heavy)']].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
 }
 
 
@@ -132,9 +132,9 @@ function effects(g, r, rx, ry) {
   if (searching) {
     for (const k of [0, 0.5]) {
       const ph = (now * 0.5 + k) % 1;
-      g.strokeStyle = `rgba(15,143,106,${0.55 * (1 - ph)})`; g.lineWidth = 2; g.beginPath(); g.arc(rx, ry, ph * cfg.thermal.range * CELL, 0, 7); g.stroke();
+      g.strokeStyle = `rgba(18,48,107,${0.55 * (1 - ph)})`; g.lineWidth = 2; g.beginPath(); g.arc(rx, ry, ph * cfg.thermal.range * CELL, 0, 7); g.stroke();
     }
-    g.fillStyle = '#0b7f66'; g.font = 'bold 10px system-ui'; g.fillText('scanning: heat camera + microphones + radar', rx + 14, ry + 22);
+    g.fillStyle = '#12306b'; g.font = 'bold 10px system-ui'; g.fillText('scanning: heat camera + microphones + radar', rx + 14, ry + 22);
   }
   for (const c of sim.casualties) {
     if (!c.alive || c.aboard || c.delivered) continue;
@@ -153,7 +153,7 @@ function effects(g, r, rx, ry) {
     const all = Object.keys(c.hits).map((k) => SENSE_LABEL[k]);
     const txt = (names.length ? names : all).join(' + ') + (c.status === 'verified' ? ' VERIFIED' : c.status === 'rejected' ? ' = decoy' : ' ?');
     const px = Math.min(c.x * CELL + CELL * 1.2, sim.W * CELL - 150), py = c.y * CELL + 12; g.font = '9px system-ui'; const w = g.measureText(txt).width + 6;
-    g.fillStyle = 'rgba(255,255,255,0.92)'; g.fillRect(px - 3, py - 9, w, 12); g.fillStyle = c.status === 'verified' ? '#0f8f6a' : c.status === 'rejected' ? '#6b7a92' : '#9a5b00'; g.fillText(txt, px, py);
+    g.fillStyle = 'rgba(255,255,255,0.92)'; g.fillRect(px - 3, py - 9, w, 12); g.fillStyle = c.status === 'verified' ? '#12306b' : c.status === 'rejected' ? '#6b7a92' : '#9a5b00'; g.fillText(txt, px, py);
   }
   if (sim.transit && sim.lastTransitT >= sim.t - 1 && st !== 'HARVEST') { // charging while swimming or towing
     g.strokeStyle = '#e6a800'; g.lineWidth = 1.5; g.beginPath();
@@ -207,7 +207,7 @@ function robotMode(rr = sim.robot) {
   const d = sim.depthAt(rr.x, rr.y);
   return d > RATING.wadeM ? 'swimming' : d > 0.15 ? 'wading' : 'walking';
 }
-const UNIT_COLOR = { A: '#12306b', B: '#6d4fd8', C: '#d97706' };
+const UNIT_COLOR = { A: '#12306b', B: '#3b6fd4', C: '#6b7a92' };
 function drawRobot(g, u, rx, ry) {
   const r = u.robot, now = performance.now() / 1000, mode = robotMode(r), temp = sim.tempAt(r.x, r.y);
   const ui = (u.ui ??= { heading: 0, lastPos: null });
@@ -228,15 +228,16 @@ function drawRobot(g, u, rx, ry) {
     g.fillStyle = '#273449'; g.beginPath(); g.roundRect(7, 12, 7, 12, 3); g.fill();
   }
   // arms
-  g.strokeStyle = '#1e4aa8'; g.lineWidth = 4; g.lineCap = 'round';
+  g.strokeStyle = '#3b6fd4'; g.lineWidth = 3.2; g.lineCap = 'round';
   const reach = r.carrying ? 15 : sw ? 12 + 6 * stroke : 6 + 2 * Math.sin(now * 4);
   g.beginPath(); g.moveTo(0, -9); g.lineTo(reach, -10 + (sw ? 3 * stroke : 0)); g.moveTo(0, 9); g.lineTo(reach, 10 - (sw ? 3 * stroke : 0)); g.stroke();
   // shoulders / torso
-  g.fillStyle = r.busy > 0 ? '#d99a3a' : (UNIT_COLOR[u.id] ?? '#3b82c4'); g.beginPath(); g.ellipse(-1, 0, 6.5, 11.5, 0, 0, 7); g.fill();
-  g.strokeStyle = '#2ed3a6'; g.lineWidth = 1.5; g.stroke();
+  g.fillStyle = r.busy > 0 ? '#cfe0fb' : '#ffffff'; g.beginPath(); g.ellipse(-1, 0, 6.5, 11.5, 0, 0, 7); g.fill();
+  g.strokeStyle = '#12306b'; g.lineWidth = 1; g.stroke();
+  g.fillStyle = UNIT_COLOR[u.id] ?? '#12306b'; g.beginPath(); g.ellipse(-1, 0, 2.6, 6, 0, 0, 7); g.fill();
   // head with visor
-  g.fillStyle = '#cfe3f5'; g.beginPath(); g.arc(1, 0, 6, 0, 7); g.fill();
-  g.fillStyle = '#2ed3a6'; g.beginPath(); g.ellipse(4, 0, 2.6, 4.4, 0, 0, 7); g.fill();
+  g.fillStyle = '#ffffff'; g.beginPath(); g.arc(1, 0, 6, 0, 7); g.fill(); g.strokeStyle = '#12306b'; g.lineWidth = 0.8; g.stroke();
+  g.fillStyle = '#12306b'; g.beginPath(); g.ellipse(4, 0, 2.6, 4.4, 0, 0, 7); g.fill();
   g.restore();
   if (sw) { g.fillStyle = 'rgba(30,100,170,0.38)'; g.beginPath(); g.arc(rx, ry, 22, 0, 7); g.fill(); } // body under the surface: only head, shoulders and arm strokes show
   g.fillStyle = '#0f1f3d'; g.font = 'bold 10px system-ui';
@@ -253,10 +254,10 @@ function depthGauge(depth, mode) {
     <rect x="70" y="${y(0)}" width="150" height="${y(5) - y(0)}" fill="#f1f6fb" stroke="#d6e0ec"/>
     <rect x="70" y="${y(0)}" width="150" height="${y(d) - y(0)}" fill="#7fb4ea" opacity=".7"/>
     <rect x="70" y="${y(2.5)}" width="150" height="${y(5) - y(2.5)}" fill="#f3b9b9" opacity=".55"/>
-    <line x1="64" x2="226" y1="${y(1)}" y2="${y(1)}" stroke="#0f8f6a" stroke-dasharray="4 3"/><text x="230" y="${y(1) + 4}" fill="#0f8f6a" font-size="10">wade limit 1.0 m</text>
+    <line x1="64" x2="226" y1="${y(1)}" y2="${y(1)}" stroke="#12306b" stroke-dasharray="4 3"/><text x="230" y="${y(1) + 4}" fill="#12306b" font-size="10">wade limit 1.0 m</text>
     <line x1="64" x2="226" y1="${y(2.5)}" y2="${y(2.5)}" stroke="#d32f2f" stroke-width="2"/><text x="230" y="${y(2.5) + 4}" fill="#c62828" font-size="10">swim limit 2.5 m</text>
     <text x="74" y="${y(3.8)}" fill="#c62828" font-size="10">refused: divers / rope team</text>
-    <circle cx="145" cy="${y(Math.max(0.15, d))}" r="7" fill="#12306b" stroke="#2ed3a6" stroke-width="2"/>
+    <circle cx="145" cy="${y(Math.max(0.15, d))}" r="7" fill="#12306b" stroke="#4f7fd9" stroke-width="2"/>
     <text x="4" y="${y(0) + 4}" fill="#5b6b82" font-size="10">0 m</text><text x="4" y="${y(5) + 4}" fill="#5b6b82" font-size="10">5 m</text>
     <text x="4" y="${y(Math.max(0.15, d)) + 4}" fill="#0f1f3d" font-size="10" font-weight="bold">${depth.toFixed(1)} m</text>
   </svg>`;
@@ -265,7 +266,7 @@ function depthGauge(depth, mode) {
 function ratings() {
   const r = sim.robot, p = sim.params, temp = sim.tempAt(r.x, r.y), depth = sim.depthAt(r.x, r.y), cur = sim.currentMagAt(r.x, r.y);
   const lim = r.carrying ? p.carryTempLimit : p.robotTempLimit, mode = robotMode();
-  const row = (label, val, max, unit, note) => `<div class="row"><span>${label}</span><span>${val.toFixed(1)} ${unit} <small>/ limit ${max}</small></span></div><div class="bar sm"><div style="width:${Math.min(100, val / max * 100)}%;background:${val / max > 0.8 ? '#ff6b6b' : '#35d0e6'}"></div></div>${note ? `<p class="hint">${note}</p>` : ''}`;
+  const row = (label, val, max, unit, note) => `<div class="row"><span>${label}</span><span>${val.toFixed(1)} ${unit} <small>/ limit ${max}</small></span></div><div class="bar sm"><div style="width:${Math.min(100, val / max * 100)}%;background:${val / max > 0.8 ? '#ff6b6b' : '#12306b'}"></div></div>${note ? `<p class="hint">${note}</p>` : ''}`;
   const gauge = sim.scenario === 'water' ? depthGauge(depth, mode) : '';
   $('ratings').innerHTML = gauge + `<div class="row"><span>Mode</span><b>${r.carrying ? mode + ', carrying' : mode}</b></div>` +
     row('Heat at the unit', temp, lim, '°C', r.carrying ? 'Carrying: the casualty must stay below 70 °C, so the limit is lower. Empty: 150 °C.' : 'Empty-handed limit 150 °C; it drops to 70 °C once it carries someone.') +
@@ -339,9 +340,7 @@ function panels() {
   $('gateLog').innerHTML = sim.gateLog.slice(-6).reverse().map((x) => `<div><span class="chip ${x.decision === 'ALLOW' ? 'allow' : x.decision === 'BLOCK' ? 'block' : 'appr'}">${x.decision}</span>${x.action} <span class="hint">${x.rule}${x.reason ? ': ' + esc(x.reason) : ''}</span></div>`).join('') || '<span class="hint">No blocks yet.</span>';
   $('cands').innerHTML = sim.candidates.slice(-6).reverse().map((k) => `<div>#${k.id} <span class="chip ${k.status === 'verified' ? 'allow' : k.status === 'rejected' ? 'block' : 'appr'}">${k.status}</span> ${Object.entries(k.hits).map(([a, b]) => `${a}×${b}`).join(', ')}</div>`).join('') || '<span class="hint">No detections yet.</span>';
   $('auditInfo').textContent = `${sim.audit.entries.length} entries`;
-  if (standby) $('banner').textContent = 'STANDBY · waiting for the DEPLOY signal from the operator\'s phone';
-  else if (sim.opts.gateMode === 'off') $('banner').textContent = 'SAFETY GATE OFF · naive robot demo · violations: ' + JSON.stringify(sim.violations);
-  else $('banner').textContent = 'SIMULATION ONLY · placeholder physics · not a certified rescue system';
+  { const msg = standby ? 'Standby: waiting for the DEPLOY signal from the operator\'s phone' : sim.opts.gateMode === 'off' ? 'Safety gate OFF (naive robot demo). Violations: ' + JSON.stringify(sim.violations) : ''; $('banner').textContent = msg; $('banner').hidden = !msg; }
 }
 const clamp = (v) => Math.max(0, Math.min(100, v));
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));

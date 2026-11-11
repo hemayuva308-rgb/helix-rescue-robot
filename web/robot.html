@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Helix Command: robot design</title>
+<link rel="icon" href="/web/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/web/style.css">
 <style>
   .grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:16px;padding:16px 20px}
@@ -16,10 +17,11 @@
 </head>
 <body>
 <header>
-  <div class="brand"><span class="logo">HX</span><div><h1>Helix Command</h1><p>Robot design as code (URDF)</p></div></div>
-  <div class="banner">The robot is described in a URDF file, the same format ROS and Gazebo read. Kinematic preview, not a physics simulation.</div>
-  <div class="tabs"><a class="tab" href="/" style="text-decoration:none;color:inherit">&larr; Dashboard<small>rescue simulation</small></a></div>
+  <a class="brand" href="/web/index.html"><img class="logo" src="/web/logo.svg" alt="Helix Command logo"><div><h1>Helix Command</h1><p>Robot design as code (URDF)</p></div></a>
+  <nav class="menu"><span class="scn" id="tabs"><a class="tab" href="/web/index.html?scenario=fire">Fire</a><a class="tab" href="/web/index.html?scenario=water">Water</a><a class="tab" href="/web/index.html?scenario=collapse">Collapse</a></span><span class="sep"></span><a class="tab" href="/web/well.html">Well</a><a class="tab" href="/web/operator.html">Operator</a><a class="tab on" href="/web/robot.html">Robot</a><a class="tab" href="/web/results.html">Results</a></nav>
+  <span class="tag" title="Simulation prototype with synthetic data. Not a certified rescue system.">Simulation prototype</span>
 </header>
+<div class="status" id="banner" hidden></div>
 <div class="grid">
   <section>
     <div class="canvaswrap"><canvas id="cv" width="960" height="640"></canvas></div>

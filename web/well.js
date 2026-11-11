@@ -24,10 +24,10 @@ function person(g, x, y, s = 1, alpha = 1, shirt = '#e98a3c') {
 }
 function robotSide(g, x, gy, carrying, busy) {
   g.save(); g.translate(x, gy); const s = 1.0;
-  g.fillStyle = '#273449'; g.fillRect(-9 * s, -34 * s, 7 * s, 34 * s); g.fillRect(2 * s, -34 * s, 7 * s, 34 * s);        // legs
-  g.fillStyle = '#12306b'; g.beginPath(); g.roundRect(-11 * s, -74 * s, 22 * s, 42 * s, 5); g.fill();                        // torso
+  g.fillStyle = '#dfe8f6'; g.fillRect(-9 * s, -34 * s, 7 * s, 34 * s); g.fillRect(2 * s, -34 * s, 7 * s, 34 * s); g.strokeStyle = '#12306b'; g.lineWidth = 1; g.strokeRect(-9 * s, -34 * s, 7 * s, 34 * s); g.strokeRect(2 * s, -34 * s, 7 * s, 34 * s);        // legs
+  g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(-11 * s, -74 * s, 22 * s, 42 * s, 5); g.fill(); g.strokeStyle = '#12306b'; g.lineWidth = 1.5; g.stroke(); g.fillStyle = '#12306b'; g.fillRect(-4 * s, -66 * s, 8 * s, 14 * s);                        // torso
   g.fillStyle = '#cfe3f5'; g.beginPath(); g.arc(0, -84 * s, 9 * s, 0, 7); g.fill();                                           // head
-  g.fillStyle = '#2ed3a6'; g.fillRect(2 * s, -87 * s, 8 * s, 5 * s);                                                          // visor
+  g.fillStyle = '#4f7fd9'; g.fillRect(2 * s, -87 * s, 8 * s, 5 * s);                                                          // visor
   g.strokeStyle = '#1e4aa8'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(8 * s, -66 * s); g.lineTo(carrying ? 24 * s : 18 * s, -52 * s + (busy ? 4 * Math.sin(performance.now() / 120) : 0)); g.stroke();
   g.restore();
 }
@@ -37,9 +37,9 @@ function shaftRobot(g, wx, m, sim, now) {
   const r = sim.robot, c = sim.casualty, wy = m(sim.well.waterAtM), y = m(r.ropeOutM), inWater = r.ropeOutM > sim.well.waterAtM;
   const top = inWater ? wy - 22 + 2 * Math.sin(now * 3) : y - 22;      // the dome stays above the surface while the pod floats
   g.strokeStyle = '#b86e00'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx - 5, m(0) - 60); g.lineTo(wx - 5, top); g.moveTo(wx + 5, m(0) - 60); g.lineTo(wx + 5, top); g.stroke(); // main rope + safety line
-  g.fillStyle = '#12306b'; g.beginPath(); g.roundRect(wx - 17, top, 34, 40, 10); g.fill(); g.strokeStyle = '#2ed3a6'; g.lineWidth = 1; g.stroke();   // pod body
+  g.fillStyle = '#12306b'; g.beginPath(); g.roundRect(wx - 17, top, 34, 40, 10); g.fill(); g.strokeStyle = '#4f7fd9'; g.lineWidth = 1; g.stroke();   // pod body
   g.fillStyle = '#cfe3f5'; g.beginPath(); g.arc(wx, top + 2, 10, Math.PI, 0); g.fill();                                                          // camera dome
-  g.fillStyle = '#2ed3a6'; g.beginPath(); g.arc(wx, top - 1, 3.5, 0, 7); g.fill();                                                                // lens
+  g.fillStyle = '#4f7fd9'; g.beginPath(); g.arc(wx, top - 1, 3.5, 0, 7); g.fill();                                                                // lens
   g.fillStyle = '#ffe36b'; g.fillRect(wx - 14, top + 8, 5, 4); g.fillRect(wx + 9, top + 8, 5, 4);                                                // lamps
   g.strokeStyle = '#ff8a3c'; g.lineWidth = 5; g.beginPath(); g.ellipse(wx, top + 30, 22, 6, 0, 0, 7); g.stroke();                                  // flotation collar
   g.strokeStyle = '#7fb4e6'; g.lineWidth = 4; g.lineCap = 'round';                                                                                 // soft cradle arms
@@ -56,7 +56,7 @@ function draw() {
   g.fillStyle = '#eef3f9'; g.fillRect(0, 0, W, H);
   g.fillStyle = '#eaf3fd'; g.fillRect(0, 0, W, GY);                                    // sky
   g.fillStyle = '#d9c9b0'; g.fillRect(0, GY, sx0, H - GY); g.fillRect(sx1, GY, W - sx1, H - GY); // ground
-  g.fillStyle = '#7fe0bf'; g.fillRect(0, GY - 6, 3.4 * pxCell + 10, 8); g.fillStyle = '#0f8f6a'; g.font = '11px system-ui'; g.fillText('SAFE ZONE', 8, GY - 12);
+  g.fillStyle = '#a9c3f0'; g.fillRect(0, GY - 6, 3.4 * pxCell + 10, 8); g.fillStyle = '#12306b'; g.font = '11px system-ui'; g.fillText('SAFE ZONE', 8, GY - 12);
   g.fillStyle = '#9aa9bf'; g.fillRect(0, GY - 2, sx0, 4); g.fillRect(sx1, GY - 2, W - sx1, 4);
   // shaft
   const bottom = m(sim.well.depthM);
@@ -88,16 +88,16 @@ function draw() {
     g.fillStyle = '#0f1f3d'; g.font = 'bold 11px system-ui'; g.fillText(`C1 health ${Math.round(c.health)}`, (c.secured ? wx : wx - 22) + 20, cy + 4);
     if (c.secured) { g.strokeStyle = '#c47a1e'; g.lineWidth = 3; g.beginPath(); g.moveTo(wx - 14, cy + 10); g.lineTo(wx + 14, cy + 10); g.stroke(); }
   }
-  if (sim.robot.fan) { g.save(); g.translate(sx1 + 30, GY - 16); g.rotate(now * 12); g.fillStyle = '#2ed3a6'; for (let i = 0; i < 3; i++) { g.rotate(2.09); g.fillRect(0, -2, 12, 4); } g.restore(); g.fillStyle = '#2ed3a6'; g.font = '10px system-ui'; g.fillText('fan', sx1 + 22, GY - 34); }
+  if (sim.robot.fan) { g.save(); g.translate(sx1 + 30, GY - 16); g.rotate(now * 12); g.fillStyle = '#4f7fd9'; for (let i = 0; i < 3; i++) { g.rotate(2.09); g.fillRect(0, -2, 12, 4); } g.restore(); g.fillStyle = '#4f7fd9'; g.font = '10px system-ui'; g.fillText('fan', sx1 + 22, GY - 34); }
   // robot (stays at the rim; walks from the safe zone)
   const rx = 20 + r.x * pxCell;
   if (r.inShaft) shaftRobot(g, wx, m, sim, now);
   robotSide(g, rx, GY, !!r.carrying, r.busy > 0);
-  if (r.carrying) { person(g, rx + 26, GY - 62, 1, 1, '#2fbf7a'); }
+  if (r.carrying) { person(g, rx + 26, GY - 62, 1, 1, '#2f5bb7'); }
   g.fillStyle = '#0f1f3d'; g.font = '10px system-ui';
   const tag = r.busy > 0 ? `${r.busyAction} ${r.busy}s` : sim.mission.state === 'CARRY' ? 'carrying' : sim.mission.state === 'WALK' ? 'walking to the well' : '';
   if (tag) g.fillText(tag, rx - 14, GY - 100);
-  if (c.delivered) { person(g, 20 + 1.5 * pxCell, GY - 16, 1, 1, '#2fbf7a'); g.fillStyle = '#0f8f6a'; g.fillText('rescued', 8, GY - 34); }
+  if (c.delivered) { person(g, 20 + 1.5 * pxCell, GY - 16, 1, 1, '#2f5bb7'); g.fillStyle = '#12306b'; g.fillText('rescued', 8, GY - 34); }
   g.fillStyle = '#5b6b82'; g.font = '11px system-ui'; g.fillText('Adults who can hold a rope: sling from the rim. Children or unconscious: a tethered rescue pod goes down (concept).', 14, 22);
   g.fillText(`Depth ${fmt(sim.well.depthM)} m   ·   winch rope rated ${P.ropeRatingM} m   ·   max hoist ${P.maxHoistSpeed} m/s`, 14, 40);
 }
@@ -145,9 +145,7 @@ function panels() {
   $('gateStats').textContent = `allowed ${sim.gateStats.allowed} · blocked ${sim.gateStats.blocked} · approvals ${sim.gateStats.approvals}`;
   $('gateLog').innerHTML = sim.gateLog.filter((x) => x.decision !== 'ALLOW').slice(-6).reverse().map((x) => `<div><span class="chip ${x.decision === 'BLOCK' ? 'block' : 'appr'}">${x.decision}</span>${x.action} <span class="hint">${x.rule}${x.reason ? ': ' + esc(x.reason) : ''}</span></div>`).join('') || '<span class="hint">No blocks yet.</span>';
   $('auditInfo').textContent = `${sim.audit.entries.length} entries`;
-  if (!sim.gateOn) $('banner').textContent = 'SAFETY GATE OFF · naive winch demo · violations: ' + JSON.stringify(sim.violations);
-  else if (standby) $('banner').textContent = 'STANDBY · waiting for the DEPLOY signal from the operator\'s phone';
-  else $('banner').textContent = 'SIMULATION ONLY · the winch, sling, rescue pod and securing step are design concepts, not built hardware';
+  { const msg = !sim.gateOn ? 'Safety gate OFF (naive winch demo). Violations: ' + JSON.stringify(sim.violations) : standby ? 'Standby: waiting for the DEPLOY signal from the operator\'s phone' : ''; $('banner').textContent = msg; $('banner').hidden = !msg; }
 }
 
 function frame(ts) {

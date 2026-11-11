@@ -3,11 +3,11 @@
      Units: metres, kilograms, radians. Shapes are simple primitives; masses are design assumptions.
      Forward = +x, left = +y, up = +z. For pitch joints (axis y), a negative angle swings the limb forward. -->
 <robot name="helix">
-  <material name="shell"><color rgba="0.10 0.25 0.52 1"/></material>
-  <material name="limb"><color rgba="0.22 0.36 0.65 1"/></material>
-  <material name="joint"><color rgba="0.18 0.83 0.65 1"/></material>
-  <material name="sensor"><color rgba="0.55 0.95 0.82 1"/></material>
-  <material name="battery"><color rgba="0.10 0.60 0.45 1"/></material>
+  <material name="shell"><color rgba="0.97 0.98 1.00 1"/></material>
+  <material name="limb"><color rgba="0.88 0.92 0.98 1"/></material>
+  <material name="joint"><color rgba="0.07 0.19 0.42 1"/></material>
+  <material name="sensor"><color rgba="0.18 0.38 0.80 1"/></material>
+  <material name="battery"><color rgba="0.30 0.50 0.85 1"/></material>
 
   <link name="base_link"><!-- pelvis -->
     <visual><geometry><box size="0.18 0.30 0.16"/></geometry><material name="shell"/></visual>

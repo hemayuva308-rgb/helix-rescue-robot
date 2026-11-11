@@ -4,18 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Helix Command</title>
+<link rel="icon" href="/web/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/web/style.css">
 </head>
 <body>
 <header>
-  <div class="brand"><span class="logo">HX</span><div><h1>Helix Command</h1><p>The decision layer for rescue robots</p></div></div>
-  <div class="banner" id="banner">SIMULATION ONLY &middot; placeholder physics &middot; not a certified rescue system</div>
-  <div class="tabs" id="tabs"></div>
-  <a class="tab" href="/web/operator.html" style="text-decoration:none;color:inherit">Operator<small>handheld screen</small></a>
-  <a class="tab" href="/web/well.html" style="text-decoration:none;color:inherit">Well<small>vertical shaft</small></a>
-  <a class="tab" href="/web/robot.html" style="text-decoration:none;color:inherit">Robot<small>design as code</small></a>
-  <a class="tab" href="/web/results.html" style="text-decoration:none;color:inherit">Results<small>eval numbers</small></a>
+  <a class="brand" href="/web/index.html"><img class="logo" src="/web/logo.svg" alt="Helix Command logo"><div><h1>Helix Command</h1><p>The decision layer for rescue robots</p></div></a>
+  <nav class="menu"><span class="scn" id="tabs"></span><span class="sep"></span><a class="tab" href="/web/well.html">Well</a><a class="tab" href="/web/operator.html">Operator</a><a class="tab" href="/web/robot.html">Robot</a><a class="tab" href="/web/results.html">Results</a></nav>
+  <span class="tag" title="Simulation prototype with synthetic data. Not a certified rescue system.">Simulation prototype</span>
 </header>
+<div class="status" id="banner" hidden></div>
 
 <main>
   <section class="left">
@@ -27,30 +25,33 @@
     </div>
     <div id="alarm" class="alarm" style="display:none"></div>
     <div class="canvaswrap"><canvas id="map" width="880" height="484"></canvas><div class="legend" id="legend"></div></div>
-    <div class="controls">
-      <button id="btnPlay">Pause</button>
-      <button id="btnStep">Step</button>
-      <label>Speed <select id="selSpeed"><option value="1">1x</option><option value="2" selected>2x</option><option value="5">5x</option><option value="12">12x</option></select></label>
-      <label>People <select id="inCount"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option></select></label>
-      <label>Animals <select id="inAnimals"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option></select></label>
-      <label>Robots <select id="inRobots"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select></label>
-      <label>Seed <input id="inSeed" type="number" value="3" min="1" max="9999"></label>
-      <label>Casualty kg <input id="inWeight" type="range" min="45" max="105" value="75"><output id="outWeight">75</output></label>
-      <button id="btnRestart" class="primary">Restart</button>
-    </div>
-    <div class="controls">
-      <label class="chk"><input type="checkbox" id="chkGate" checked> Safety gate ON</label>
-      <label class="chk"><input type="checkbox" id="chkAuto" checked> Commander auto-approves</label>
-      <label class="chk"><input type="checkbox" id="chkTransit" checked> Charge while moving (water)</label>
-      <label class="chk"><input type="checkbox" id="chkTruth"> Show ground truth</label>
-      <label class="chk"><input type="checkbox" id="chkSound" checked> Alarm sound</label>
-      <button id="btnSound">Test alarm sound</button>
-      <button id="btnInject">Inject poisoned report</button>
-      <button id="btnAfter" style="display:none">Aftershock</button>
-    </div>
   </section>
 
   <aside class="right">
+    <div class="card" id="cardControls">
+      <h2>Setup <small>speed, people, robots, safety</small></h2>
+      <div class="controls">
+        <button id="btnPlay">Pause</button>
+        <button id="btnStep">Step</button>
+        <label>Speed <select id="selSpeed"><option value="1">1x</option><option value="2" selected>2x</option><option value="5">5x</option><option value="12">12x</option></select></label>
+        <label>People <select id="inCount"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option></select></label>
+        <label>Animals <select id="inAnimals"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option></select></label>
+        <label>Robots <select id="inRobots"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select></label>
+        <label>Seed <input id="inSeed" type="number" value="3" min="1" max="9999"></label>
+        <label>Casualty kg <input id="inWeight" type="range" min="45" max="105" value="75"><output id="outWeight">75</output></label>
+        <button id="btnRestart" class="primary">Restart</button>
+      </div>
+      <div class="controls">
+        <label class="chk"><input type="checkbox" id="chkGate" checked> Safety gate ON</label>
+        <label class="chk"><input type="checkbox" id="chkAuto" checked> Commander auto-approves</label>
+        <label class="chk"><input type="checkbox" id="chkTransit" checked> Charge while moving (water)</label>
+        <label class="chk"><input type="checkbox" id="chkTruth"> Show ground truth</label>
+        <label class="chk"><input type="checkbox" id="chkSound" checked> Alarm sound</label>
+        <button id="btnSound">Test alarm sound</button>
+        <button id="btnInject">Inject poisoned report</button>
+        <button id="btnAfter" style="display:none">Aftershock</button>
+      </div>
+    </div>
     <div class="card" id="cardEnergy">
       <h2>Energy</h2>
       <div class="bar"><div id="batFill"></div><div id="batReserve" title="reserve"></div></div>
