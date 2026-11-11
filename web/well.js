@@ -30,17 +30,21 @@ function robotSide(g, x, gy, carrying, busy) {
   g.restore();
 }
 
-// The unit going down the shaft on the tether: swims to the casualty and rises with them in its arms.
+// The tethered rescue pod (design concept): camera dome, lamp, flotation collar and soft cradle arms. The humanoid stays at the rim.
 function shaftRobot(g, wx, m, sim, now) {
   const r = sim.robot, c = sim.casualty, wy = m(sim.well.waterAtM), y = m(r.ropeOutM), inWater = r.ropeOutM > sim.well.waterAtM;
-  const hy = inWater ? wy - 6 + 2 * Math.sin(now * 3) : y;           // head stays above the surface while swimming
-  g.strokeStyle = '#ffd08a'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx - 4, m(0) - 60); g.lineTo(wx - 4, hy - 12); g.moveTo(wx + 4, m(0) - 60); g.lineTo(wx + 4, hy - 12); g.stroke(); // main rope + safety line
-  g.fillStyle = '#3b82c4'; g.beginPath(); g.ellipse(wx, hy + 12, 13, 9, 0, 0, 7); g.fill();            // shoulders
-  g.fillStyle = '#cfe3f5'; g.beginPath(); g.arc(wx, hy, 8, 0, 7); g.fill();                                // head
-  g.fillStyle = '#12c4e0'; g.fillRect(wx - 6, hy - 3, 12, 5);                                               // visor
-  if (c.inArms) { g.fillStyle = '#e98a3c'; g.beginPath(); g.roundRect(wx - 6, hy + 14, 12, 26, 5); g.fill(); g.fillStyle = '#e0bc9f'; g.beginPath(); g.arc(wx, hy + 12, 5, 0, 7); g.fill(); }
-  if (inWater) { g.fillStyle = 'rgba(30,100,170,0.45)'; g.fillRect(wx - 22, wy, 44, 60); g.strokeStyle = 'rgba(190,230,255,0.7)'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(wx, wy, 18 + 3 * Math.sin(now * 3), 4, 0, 0, 7); g.stroke(); }
-  g.fillStyle = '#fff'; g.font = '10px system-ui'; g.fillText(c.inArms ? (inWater ? 'swimming with the casualty' : 'rising with the casualty') : inWater ? 'swimming' : 'descending on tether', wx + 28, hy);
+  const top = inWater ? wy - 22 + 2 * Math.sin(now * 3) : y - 22;      // the dome stays above the surface while the pod floats
+  g.strokeStyle = '#ffd08a'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx - 5, m(0) - 60); g.lineTo(wx - 5, top); g.moveTo(wx + 5, m(0) - 60); g.lineTo(wx + 5, top); g.stroke(); // main rope + safety line
+  g.fillStyle = '#3b82c4'; g.beginPath(); g.roundRect(wx - 17, top, 34, 40, 10); g.fill(); g.strokeStyle = '#9fd3ff'; g.lineWidth = 1; g.stroke();   // pod body
+  g.fillStyle = '#cfe3f5'; g.beginPath(); g.arc(wx, top + 2, 10, Math.PI, 0); g.fill();                                                          // camera dome
+  g.fillStyle = '#12c4e0'; g.beginPath(); g.arc(wx, top - 1, 3.5, 0, 7); g.fill();                                                                // lens
+  g.fillStyle = '#ffe36b'; g.fillRect(wx - 14, top + 8, 5, 4); g.fillRect(wx + 9, top + 8, 5, 4);                                                // lamps
+  g.strokeStyle = '#ff8a3c'; g.lineWidth = 5; g.beginPath(); g.ellipse(wx, top + 30, 22, 6, 0, 0, 7); g.stroke();                                  // flotation collar
+  g.strokeStyle = '#7fb4e6'; g.lineWidth = 4; g.lineCap = 'round';                                                                                 // soft cradle arms
+  g.beginPath(); g.moveTo(wx - 15, top + 24); g.quadraticCurveTo(wx - 24, top + 52, wx - 6, top + 56); g.moveTo(wx + 15, top + 24); g.quadraticCurveTo(wx + 24, top + 52, wx + 6, top + 56); g.stroke();
+  if (c.inArms) { g.fillStyle = '#e98a3c'; g.beginPath(); g.roundRect(wx - 6, top + 30, 12, 26, 5); g.fill(); g.fillStyle = '#e0bc9f'; g.beginPath(); g.arc(wx, top + 28, 5, 0, 7); g.fill(); }
+  if (inWater) { g.fillStyle = 'rgba(30,100,170,0.45)'; g.fillRect(wx - 26, wy, 52, 60); g.strokeStyle = 'rgba(190,230,255,0.7)'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(wx, wy, 22 + 3 * Math.sin(now * 3), 4, 0, 0, 7); g.stroke(); }
+  g.fillStyle = '#fff'; g.font = '10px system-ui'; g.fillText(c.inArms ? 'rescue pod rising with the casualty' : inWater ? 'rescue pod floating to the casualty' : 'rescue pod on the tether', wx + 30, top + 14);
 }
 function draw() {
   const cv = $('map'), g = cv.getContext('2d'), W = cv.width, H = cv.height, now = performance.now() / 1000;
@@ -84,13 +88,14 @@ function draw() {
   if (sim.robot.fan) { g.save(); g.translate(sx1 + 30, GY - 16); g.rotate(now * 12); g.fillStyle = '#9fd3ff'; for (let i = 0; i < 3; i++) { g.rotate(2.09); g.fillRect(0, -2, 12, 4); } g.restore(); g.fillStyle = '#9fd3ff'; g.font = '10px system-ui'; g.fillText('fan', sx1 + 22, GY - 34); }
   // robot (stays at the rim; walks from the safe zone)
   const rx = 20 + r.x * pxCell;
-  if (r.inShaft) shaftRobot(g, wx, m, sim, now); else robotSide(g, rx, GY, !!r.carrying, r.busy > 0);
+  if (r.inShaft) shaftRobot(g, wx, m, sim, now);
+  robotSide(g, rx, GY, !!r.carrying, r.busy > 0);
   if (r.carrying) { person(g, rx + 26, GY - 62, 1, 1, '#2fbf7a'); }
   g.fillStyle = '#fff'; g.font = '10px system-ui';
   const tag = r.busy > 0 ? `${r.busyAction} ${r.busy}s` : sim.mission.state === 'CARRY' ? 'carrying' : sim.mission.state === 'WALK' ? 'walking to the well' : '';
   if (tag) g.fillText(tag, rx - 14, GY - 100);
   if (c.delivered) { person(g, 20 + 1.5 * pxCell, GY - 16, 1, 1, '#2fbf7a'); g.fillStyle = '#7be0ab'; g.fillText('rescued', 8, GY - 34); }
-  g.fillStyle = '#8aa0b6'; g.font = '11px system-ui'; g.fillText('Adults who can hold a rope: sling from the rim. Children or unconscious: the unit goes down on the tether.', 14, 22);
+  g.fillStyle = '#8aa0b6'; g.font = '11px system-ui'; g.fillText('Adults who can hold a rope: sling from the rim. Children or unconscious: a tethered rescue pod goes down (concept).', 14, 22);
   g.fillText(`Depth ${fmt(sim.well.depthM)} m   ·   winch rope rated ${P.ropeRatingM} m   ·   max hoist ${P.maxHoistSpeed} m/s`, 14, 40);
 }
 
@@ -108,8 +113,8 @@ function panels() {
     `water surface    ${fmt(sim.well.waterAtM)} m`,
     `air              methane ${fmt(sim.gas.lel, 0)}% LEL (limit ${P.lelLimit}%) · O2 ${fmt(sim.gas.o2)}%`,
     `rope out         ${fmt(r.ropeOutM)} m   anchored: ${r.anchored ? 'yes' : 'no'}`,
-    `shaft width      ${fmt(sim.well.widthM * 100, 0)} cm (unit needs ${fmt(P.minWidthM * 100, 0)} cm)`,
-    `method           ${m.mode === 'descent' ? 'unit descends on the tether' : m.mode === 'sling' ? 'sling from the rim' : 'not chosen yet'}`,
+    `shaft width      ${fmt(sim.well.widthM * 100, 0)} cm (pod needs ${fmt(P.minWidthM * 100, 0)} cm)`,
+    `method           ${m.mode === 'descent' ? 'rescue pod on the tether' : m.mode === 'sling' ? 'sling from the rim' : 'not chosen yet'}`,
     `rope load        ${fmt(r.load, 0)} kg (rated ${m.mode === 'descent' ? P.descentRatedKg : P.winchRatedKg} kg)`,
   ].join('<br>');
   $('casualty').innerHTML = m.verified || c.delivered ? [
@@ -132,7 +137,7 @@ function panels() {
   $('gateLog').innerHTML = sim.gateLog.filter((x) => x.decision !== 'ALLOW').slice(-6).reverse().map((x) => `<div><span class="chip ${x.decision === 'BLOCK' ? 'block' : 'appr'}">${x.decision}</span>${x.action} <span class="hint">${x.rule}${x.reason ? ': ' + esc(x.reason) : ''}</span></div>`).join('') || '<span class="hint">No blocks yet.</span>';
   $('auditInfo').textContent = `${sim.audit.entries.length} entries`;
   if (!sim.gateOn) $('banner').textContent = 'SAFETY GATE OFF · naive winch demo · violations: ' + JSON.stringify(sim.violations);
-  else $('banner').textContent = 'SIMULATION ONLY · the winch, sling and securing step are design assumptions, not built hardware';
+  else $('banner').textContent = 'SIMULATION ONLY · the winch, sling, rescue pod and securing step are design concepts, not built hardware';
 }
 
 function frame(ts) {

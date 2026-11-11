@@ -1,5 +1,5 @@
 // Well / borewell rescue simulation (placeholder physics, simulation only).
-// A walking humanoid cannot go down a vertical shaft, so the unit works a tethered winch from the rim and
+// A walking humanoid cannot go down a vertical shaft, so the unit works a tethered winch from the rim and, for children and unconscious casualties, sends a small tethered RESCUE POD down (a design concept, not built) and
 // lowers a rescue sling. Every action goes through a deterministic gate (plain code); lifts need approval.
 // Everything about the winch, the sling and the "secure" step is a DESIGN ASSUMPTION: none of it is built.
 import { AuditLog } from './audit.js';
@@ -15,8 +15,8 @@ export const WELL_PARAMS = {
   o2Low: 19.5,
   batteryReserve: 8,
   approvalTimeout: 25,
-  descentRatedKg: 200,    // rated load of the dual-rope descent mode (unit + casualty)
-  robotKg: 80, descentSpeed: 0.3, swimLimitM: 2.5, minWidthM: 0.9, // the unit is about 0.6 m across the shoulders: needs a shaft of at least 0.9 m
+  descentRatedKg: 200,    // rated load of the dual-rope descent mode (pod + casualty)
+  robotKg: 45, descentSpeed: 0.3, swimLimitM: 2.5, minWidthM: 0.7, // the rescue pod is about 0.5 m across and 45 kg: needs a shaft of at least 0.7 m
   wellX: 18, safeX: 3,    // positions along the ground, in cells
 };
 
@@ -74,10 +74,10 @@ export class WellSimulation {
       case 'commit': {
         if (this.well.depthM > p.ropeRatingM) return BLOCK('R2_depth', `shaft is ${this.well.depthM.toFixed(0)} m deep, rope rated for ${p.ropeRatingM} m: rope rescue team required`);
         if (a.mode === 'descent') {
-          if (this.well.widthM < p.minWidthM) return BLOCK('R11_width', `shaft is only ${(this.well.widthM * 100).toFixed(0)} cm wide: the unit (about 60 cm across) cannot enter. Rope rescue or excavation team required`);
+          if (this.well.widthM < p.minWidthM) return BLOCK('R11_width', `shaft is only ${(this.well.widthM * 100).toFixed(0)} cm wide: the rescue pod (about 50 cm across) cannot enter. Rope rescue or excavation team required`);
           const sub = Math.max(0, c.posM - this.well.waterAtM);
-          if (sub > p.swimLimitM) return BLOCK('R8_depth', `casualty is ${sub.toFixed(1)} m under the surface, beyond the unit's ${p.swimLimitM} m swim limit: divers required`);
-          if (p.robotKg + a.weightKg > p.descentRatedKg) return BLOCK('R3_load', `unit + casualty ${(p.robotKg + a.weightKg).toFixed(0)} kg exceeds the ${p.descentRatedKg} kg descent rating`);
+          if (sub > p.swimLimitM) return BLOCK('R8_depth', `casualty is ${sub.toFixed(1)} m under the surface, beyond the pod's ${p.swimLimitM} m depth limit under water: divers required`);
+          if (p.robotKg + a.weightKg > p.descentRatedKg) return BLOCK('R3_load', `pod + casualty ${(p.robotKg + a.weightKg).toFixed(0)} kg exceeds the ${p.descentRatedKg} kg descent rating`);
         } else if (a.weightKg + p.slingKg > p.winchRatedKg) return BLOCK('R3_load', `${a.weightKg.toFixed(0)} kg + sling exceeds the ${p.winchRatedKg} kg winch rating`);
         if (a.energy + p.batteryReserve > this.robot.battery) return BLOCK('R8_battery', `needs ${a.energy.toFixed(1)}% + ${p.batteryReserve}% reserve, battery ${this.robot.battery.toFixed(1)}%`);
         return ALLOW;
@@ -251,15 +251,15 @@ export class WellSimulation {
     const energy = 0.8 + (w.depthM / p.hoistSpeed) * (0.01 + 0.00012 * (est + p.slingKg)) + (w.depthM / p.lowerSpeed) * 0.01 + 1.5;
     m.energyNeeded = energy;
     m.mode = c.conscious && c.age === 'adult' ? 'sling' : 'descent';
-    if (m.mode === 'descent') this.emit('Mission', 'info', `${c.age === 'child' ? 'A child' : 'This casualty'} ${c.conscious ? 'cannot be expected to hold a rope' : 'is unconscious and cannot hold a rope'}: a sling is not enough. The unit itself will go down the shaft on the tether (dual rope), swim to the casualty, hold them in its arms and be hoisted up with them.`);
+    if (m.mode === 'descent') this.emit('Mission', 'info', `${c.age === 'child' ? 'A child' : 'This casualty'} ${c.conscious ? 'cannot be expected to hold a rope' : 'is unconscious and cannot hold a rope'}: a sling is not enough. The unit stays at the rim and sends a small rescue pod down on the tether (dual rope). The pod floats to the casualty, cradles them with soft arms and a flotation collar, and is hoisted up with them.`);
     const g = this.runGate({ type: 'commit', weightKg: est, energy: m.mode === 'descent' ? energy + 1.5 : energy, mode: m.mode });
     if (g.decision === 'BLOCK') {
       this.emit('Gate', 'block', `${g.rule}: ${g.reason}`);
-      this.escalate(g.rule === 'R11_width' ? 'Shaft too narrow for the unit to enter (borewell): rope rescue or excavation team requested' : g.rule === 'R8_depth' ? 'Casualty is too deep under water for the unit: divers requested' : g.rule === 'R2_depth' ? `Shaft deeper than the ${p.ropeRatingM} m rope rating: rope rescue team requested` : g.rule === 'R3_load' ? 'Casualty too heavy for the winch rating: rope rescue team requested' : 'Battery too low for the extraction: human team requested');
+      this.escalate(g.rule === 'R11_width' ? 'Shaft too narrow for the rescue pod (borewell): rope rescue or excavation team requested' : g.rule === 'R8_depth' ? 'Casualty is too deep under water for the pod: divers requested' : g.rule === 'R2_depth' ? `Shaft deeper than the ${p.ropeRatingM} m rope rating: rope rescue team requested` : g.rule === 'R3_load' ? 'Casualty too heavy for the winch rating: rope rescue team requested' : 'Battery too low for the extraction: human team requested');
       return;
     }
-    this.emit('Mission', 'ok', `Plan accepted (${m.mode === 'descent' ? 'unit descends on the tether' : 'sling lowered from the rim'}): needs about ${energy.toFixed(1)}% battery + ${p.batteryReserve}% reserve (have ${r.battery.toFixed(1)}%).`);
-    this.requestApproval('lift', 'C1', 'commander', m.mode === 'descent' ? `Send the unit down the shaft on the tether to bring up casualty C1 (${c.age}, about ${est.toFixed(0)} kg) from ${c.posM.toFixed(0)} m` : `Lower the rescue sling and lift casualty C1 (about ${est.toFixed(0)} kg) from ${c.posM.toFixed(0)} m`);
+    this.emit('Mission', 'ok', `Plan accepted (${m.mode === 'descent' ? 'rescue pod goes down on the tether' : 'sling lowered from the rim'}): needs about ${energy.toFixed(1)}% battery + ${p.batteryReserve}% reserve (have ${r.battery.toFixed(1)}%).`);
+    this.requestApproval('lift', 'C1', 'commander', m.mode === 'descent' ? `Send the rescue pod down the shaft on the tether to bring up casualty C1 (${c.age}, about ${est.toFixed(0)} kg) from ${c.posM.toFixed(0)} m` : `Lower the rescue sling and lift casualty C1 (about ${est.toFixed(0)} kg) from ${c.posM.toFixed(0)} m`);
     if (c.spinal) this.requestApproval('medic', 'C1', 'medic', 'Spinal injury suspected for C1: approve lifting');
     this.setState('AWAIT_APPROVAL');
   }
@@ -307,10 +307,10 @@ export class WellSimulation {
     const r = this.robot, c = this.casualty, p = this.params, m = this.mission;
     const g = this.runGate({ type: 'descend', speed: p.descentSpeed }, true);
     if (g.decision !== 'ALLOW') { if (g.decision === 'APPROVAL') this.requestApproval(g.role === 'medic' ? 'medic' : 'lift', 'C1', g.role, g.reason); return; }
-    if (!m.descending) { m.descending = true; r.inShaft = true; this.emit('Operator', 'info', `Unit going down the shaft on the tether at ${p.descentSpeed} m/s (main rope plus safety line), camera and lamp on.`); }
+    if (!m.descending) { m.descending = true; r.inShaft = true; this.emit('Operator', 'info', `Rescue pod going down the shaft on the tether at ${p.descentSpeed} m/s (main rope plus safety line), camera and lamp on.`); }
     r.ropeOutM = Math.min(c.posM, r.ropeOutM + p.descentSpeed); r.load = p.robotKg; r.battery -= 0.012;
-    if (!m.swimNote && r.ropeOutM > this.well.waterAtM) { m.swimNote = true; this.emit('Operator', 'info', 'Entering the water: swim mode, head and sensors kept above the surface.'); }
-    if (r.ropeOutM >= c.posM - 0.01) { this.emit('Operator', 'ok', `Unit at the casualty (${c.posM.toFixed(1)} m).`); this.setState('GRAB'); }
+    if (!m.swimNote && r.ropeOutM > this.well.waterAtM) { m.swimNote = true; this.emit('Operator', 'info', 'Pod reaches the water: flotation collar inflated, camera kept above the surface.'); }
+    if (r.ropeOutM >= c.posM - 0.01) { this.emit('Operator', 'ok', `Pod at the casualty (${c.posM.toFixed(1)} m).`); this.setState('GRAB'); }
   }
 
   doGrab() {
@@ -322,9 +322,9 @@ export class WellSimulation {
       if (this.rng() < pr) {
         c.secured = true; c.inArms = true;
         if (c.unclothed && !c.covered) { c.covered = true; this.emit('Operator', 'ok', 'Casualty wrapped in the thermal blanket (dignity protocol, also reduces heat loss).'); }
-        this.emit('Operator', 'ok', `Casualty held in the cradle carry with the head above the water and a flotation collar on (${c.age === 'child' ? 'small child, held gently' : 'adult'}). Camera confirmed the hold.`);
+        this.emit('Operator', 'ok', `Casualty cradled by the pod's soft arms with the head above the water and a flotation collar on (${c.age === 'child' ? 'small child, held gently' : 'adult'}). Camera confirmed the hold.`);
         r.load = this.params.robotKg + c.weightKg; this.setState('HOIST');
-      } else if (m.secureTries >= 3) this.escalate('The unit could not get a safe hold on the casualty after 3 tries: divers or rope rescue team requested');
+      } else if (m.secureTries >= 3) this.escalate('The pod could not get a safe hold on the casualty after 3 tries: divers or rope rescue team requested');
       else this.emit('Operator', 'warn', `Hold not confirmed by the camera (try ${m.secureTries} of 3): repositioning.`);
     });
   }
@@ -340,7 +340,7 @@ export class WellSimulation {
     if (!m.hoisting) { m.hoisting = true; this.emit('Operator', 'info', `Hoisting slowly at ${speed} m/s (rope load about ${load.toFixed(0)} kg of ${m.mode === 'descent' ? p.descentRatedKg : p.winchRatedKg} kg).`); }
     r.ropeOutM = Math.max(0, r.ropeOutM - speed); c.aboard = true; r.battery -= 0.01 + 0.00012 * load;
     if (r.ropeOutM <= 0 && m.mode === 'descent') {
-      this.startAction('step_out', 5, () => { r.inShaft = false; r.carrying = c; r.load = 0; this.hoistSpeedNow = 0; this.emit('Operator', 'ok', 'Unit and casualty are back at the rim. Stepping out with the casualty in its arms.'); this.setState('CARRY'); });
+      this.startAction('step_out', 5, () => { r.inShaft = false; r.carrying = c; r.load = 0; this.hoistSpeedNow = 0; this.emit('Operator', 'ok', 'Pod and casualty are back at the rim. The unit lifts the casualty out of the pod and carries them.'); this.setState('CARRY'); });
     } else if (r.ropeOutM <= 0) {
       this.startAction('unload', 6, () => {
         r.carrying = c; r.load = 0; this.hoistSpeedNow = 0; this.emit('Operator', 'ok', 'Casualty at the rim and unloaded from the sling.'); this.setState('CARRY');

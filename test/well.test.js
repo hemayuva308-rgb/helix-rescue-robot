@@ -39,7 +39,7 @@ test('well: injected text never changes what the unit does', () => {
 });
 
 test('well: over-weight casualty (beyond the winch rating) is refused', () => {
-  const r = run({ seed: 2, depthM: 14, gas: false, casualtyWeight: 160 });
+  const r = run({ seed: 2, depthM: 14, gas: false, casualtyWeight: 160, who: 'adult' });
   assert.equal(r.outcome, 'escalated');
 });
 
