@@ -394,5 +394,11 @@ host = initHost({
   getScn: () => scenario, getSim: () => sim, getCtx: () => ({ deployed: !standby, held: false }),
   onDeploy: phoneDeploy,
   onRestart: () => { restart(); standby = host.connected; },
-  onPhone: (c) => { if (c && !phoneEver) { phoneEver = true; $('chkAuto').checked = false; /* approvals now go to the phone */ restart(); standby = true; } else if (!c && standby) { standby = false; } panels(); },
+  onSolo: () => { standby = false; playing = true; $('btnPlay').textContent = 'Pause'; sim.opts.autoCommander = true; $('chkAuto').checked = true; sim.setLink(true); sim.emit('System', 'info', 'Running without the phone: approvals are automatic.'); panels(); },
+  onPhone: (c) => {
+    if (c && !phoneEver) { phoneEver = true; $('chkAuto').checked = false; /* approvals now go to the phone */ restart(); standby = true; }
+    else if (c) { if (!standby) sim.setLink(true); }
+    else if (!standby && !sim.outcome) sim.setLink(false); // the operator's phone is gone: same as a lost link, the units hold and raise an alarm
+    panels();
+  },
 });

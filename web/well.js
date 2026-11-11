@@ -178,5 +178,11 @@ host = initHost({
   getScn: () => 'well', getSim: () => sim, getCtx: () => ({ deployed: !standby, held: false }),
   onDeploy: phoneDeploy,
   onRestart: () => { restart(); standby = host.connected; },
-  onPhone: (c) => { if (c && !phoneEver) { phoneEver = true; $('chkAuto').checked = false; restart(); standby = true; } else if (!c && standby) { standby = false; } panels(); },
+  onSolo: () => { standby = false; playing = true; $('btnPlay').textContent = 'Pause'; sim.opts.autoCommander = true; $('chkAuto').checked = true; sim.setLink(true); sim.emit('System', 'info', 'Running without the phone: approvals are automatic.'); panels(); },
+  onPhone: (c) => {
+    if (c && !phoneEver) { phoneEver = true; $('chkAuto').checked = false; restart(); standby = true; }
+    else if (c) { if (!standby) sim.setLink(true); }
+    else if (!standby && !sim.outcome) sim.setLink(false);
+    panels();
+  },
 });

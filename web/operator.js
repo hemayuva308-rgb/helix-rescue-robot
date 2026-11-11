@@ -125,8 +125,12 @@ function connect(c) {
     else if (m.t === 'reply') { pendingCmd = 0; $('vHeard').textContent = `Heard: "${m.heard}"`; showReply(m.text); }
   } });
   const beat = () => { if (mode === 'remote' && link) link.send({ t: 'hi', need: hello ? '' : 'hello' }); };
-  clearInterval(connect.timer); connect.timer = setInterval(beat, 1500); beat();
+  clearInterval(connect.timer); connect.timer = setInterval(beat, 1500); beat(); keepAwake();
 }
+// Keep the phone screen on while paired: a sleeping phone stops talking to the laptop.
+let wakeLock = null;
+async function keepAwake() { try { if ('wakeLock' in navigator && mode === 'remote' && document.visibilityState === 'visible') wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { /* not available */ } }
+document.addEventListener('visibilitychange', keepAwake);
 function disconnect() { clearInterval(connect.timer); if (link) link.close(); link = null; mode = 'local'; document.body.classList.remove('remote'); $('pairBox').style.display = ''; $('pairedBox').style.display = 'none'; vm = null; restartLocal(); }
 
 // ---------------------------------------------------------------- voice and typed commands
