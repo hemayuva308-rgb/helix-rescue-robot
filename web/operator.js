@@ -8,6 +8,8 @@ import { T } from '/src/scenarios.js';
 import { makeHello, snapshot } from '/src/snapshot.js';
 import { playAlarm } from '/web/alarm.js';
 import { createLink, cleanCode } from '/web/link.js';
+import { askAi } from '/web/ai.js';
+import { parseCommand } from '/src/command.js';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -41,9 +43,23 @@ function actDeploy() {
   if (mode === 'remote') { link.send({ t: 'standing', on: $('chkStanding').checked }); link.send({ t: 'deploy' }); return; }
   if (deployed) return; sim.opts.standingApproval = $('chkStanding').checked; deployed = true; sim.emit('Operator', 'info', 'Operator signal: DEPLOY. The units go in autonomously; no manual steering.'); setDeployButton(true);
 }
-function actCommand(text, source) {
+const CANON = { recall: 'come out', hold: 'hold position', resume: 'resume', deploy: 'deploy' };
+async function actCommand(text, source) {
   if (!text.trim()) return;
   $('vHeard').textContent = `Heard: "${text}"`;
+  if (parseCommand(text).intent === 'unknown') { // the fixed grammar did not understand: the optional language model may map it to ONE safe intent, nothing else
+    $('vReply').textContent = 'Unit reply: checking what you meant...';
+    const r = await askAi('interpret', { text });
+    if (r.mode === 'llm' && r.intent !== 'none' && CANON[r.intent]) {
+      if (r.intent === 'recall' || r.intent === 'hold') { $('vReply').textContent = `AI assistant understood this as "${CANON[r.intent]}".`; return sendCommand(CANON[r.intent], `${source}, AI-interpreted`); }
+      $('vConfirm').style.display = ''; $('vConfirm').innerHTML = `The AI assistant thinks you meant <b>${CANON[r.intent]}</b>. <button id="vYes">Yes, do it</button> <button id="vNo">No</button>`;
+      $('vYes').onclick = () => { $('vConfirm').style.display = 'none'; sendCommand(CANON[r.intent], `${source}, AI-interpreted and confirmed`); }; $('vNo').onclick = () => { $('vConfirm').style.display = 'none'; $('vReply').textContent = 'Unit reply: cancelled.'; };
+      return;
+    }
+  }
+  sendCommand(text, source);
+}
+function sendCommand(text, source) {
   if (mode === 'remote') { link.send({ t: 'cmd', text, source }); $('vReply').textContent = 'Unit reply: sent to the laptop, waiting for its answer...'; pendingCmd = Date.now(); setTimeout(() => { if (pendingCmd && Date.now() - pendingCmd >= 3000) $('vReply').textContent = 'Unit reply: NO ANSWER from the laptop in 3 seconds. The link is not working (check the code, that both devices are online, and use the same Wi-Fi if you can).'; }, 3100); return; }
   const res = sim.command(text, source);
   if (res.intent === 'deploy' && res.ok && !deployed) actDeploy();
@@ -166,6 +182,12 @@ $('btnRestart').onclick = () => { if (mode === 'remote') { link.send({ t: 'resta
 $('btnSound').onclick = () => playAlarm('human');
 $('btnPair').onclick = () => connect($('inPair').value); $('inPair').onkeydown = (e) => { if (e.key === 'Enter') connect($('inPair').value); };
 $('btnUnpair').onclick = disconnect;
+$('btnBrief').onclick = async () => {
+  if (!vm) { $('vBrief').textContent = 'Nothing to brief yet.'; return; }
+  $('vBrief').textContent = 'Writing the briefing...';
+  const r = await askAi('brief', { scenario: vm.scn, time: vm.time, deployed: vm.deployed, done: vm.done, total: vm.total, outcome: vm.outcome, units: vm.units.map((u) => ({ id: u.id, label: u.label, battery: u.battery })), people: vm.people, alarms: vm.alarms.slice(-3), pending: vm.pending.map((a) => ({ role: a.role, reason: a.reason })) });
+  $('vBrief').innerHTML = `${esc(r.text)} <span class="note">(${r.mode === 'llm' ? 'written by the AI assistant, advisory only' : 'standard summary, no AI model connected'})</span>`;
+};
 $('btnPing').onclick = () => { if (mode !== 'remote') { $('vReply').textContent = 'Link test: not paired with a laptop (this page is running its own simulation).'; return; } pingAt = Date.now(); link.send({ t: 'ping', n: pingAt }); $('vReply').textContent = 'Link test: sent, waiting...'; setTimeout(() => { if (pingAt && $('vReply').textContent.endsWith('waiting...')) $('vReply').textContent = 'Link test: NO ANSWER from the laptop. The link is not working.'; }, 3500); };
 for (const id of ['inScn', 'inCount', 'inAnimals', 'inRobots', 'inWeight', 'inSeed', 'chkAuto']) $(id).onchange = () => { if (id === 'inScn') $('inSeed').value = SEEDS[$('inScn').value]; restartLocal(); };
 $('inSpeed').onchange = () => { speed = Number($('inSpeed').value); };

@@ -28,7 +28,7 @@ npm run eval              # 100 randomised runs per scenario -> eval/RESULTS.md 
 docker compose up         # same server in a container
 ```
 
-Optional environment variables: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` send a real Telegram message when the commander approves the dispatch (otherwise it is logged and the UI says so). `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` enable an advisory briefing endpoint (`/api/brief`) that is text only and never reaches the gate.
+Optional environment variables: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` send a real Telegram message when the commander approves the dispatch (otherwise it is logged and the UI says so). `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` (and optional `LLM2_*`) enable the optional AI assistant: a situation brief, free-speech command interpretation limited to four safe intents, and an incident summary. It is advisory only and never reaches the safety gate; see `docs/AI_SETUP.md`.
 
 ## What it does
 

@@ -1,0 +1,30 @@
+# Optional AI assistant (advisory only)
+
+The project works without any model. If you connect an OpenAI-compatible chat API, three optional things get better:
+
+| Feature | What the model does | What it can NOT do |
+| --- | --- | --- |
+| Situation brief (operator page) | writes 3 to 4 plain sentences from the unit and alarm data | read by the safety gate, give orders |
+| Free-speech commands (operator page) | maps a sentence such as "it is getting dangerous, pull everyone back" to one of four intents: come out, hold, resume, deploy | invent an action: anything else becomes "not understood". Come out and hold run at once; resume and deploy ask for a tap to confirm. They then pass through the same command grammar and safety gate as typed commands |
+| Incident report summary (dashboard) | writes a short summary of a finished run | change the audit log or the outcome |
+
+Prompts are fixed on the server (`src/llm.js`); the browser only sends data. Without a key, every feature falls back to a deterministic template or to the fixed command grammar, and says so on screen.
+
+## Environment variables (names only; never put a key in the code, the repository or a chat)
+```
+LLM_BASE_URL   base URL of an OpenAI-compatible API, for example https://host/v1   (the app calls BASE_URL/chat/completions)
+LLM_API_KEY    the key
+LLM_MODEL      the model name
+LLM2_BASE_URL, LLM2_API_KEY, LLM2_MODEL   optional second provider, used if the first one fails
+```
+
+## On Vercel
+Project, Settings, Environment Variables: add the names above (Production), then redeploy. The function is `api/llm.js`.
+
+## Locally
+```bash
+LLM_BASE_URL=... LLM_API_KEY=... LLM_MODEL=... node local-server.js
+```
+
+## Tests
+`test/llm.test.js` uses a mock provider: fallbacks, the key staying server-side, and unsafe answers being turned into "none".

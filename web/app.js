@@ -3,6 +3,7 @@ import { T, SCENARIO_NAMES } from '/src/scenarios.js';
 import { verifyChain } from '/src/audit.js';
 import { playAlarm } from '/web/alarm.js';
 import { initHost } from '/web/host-link.js';
+import { askAi } from '/web/ai.js';
 
 const CELL = 22;
 const $ = (id) => document.getElementById(id);
@@ -375,14 +376,15 @@ $('btnTamper').onclick = () => {
   copy[2].data.msg = 'edited after the fact';
   const v = verifyChain(copy); $('auditMsg').textContent = v.ok ? 'Tamper NOT detected (bug)' : `Tampered copy rejected: chain broken at entry ${v.brokenAt}. The real log is untouched.`;
 };
-$('btnReport').onclick = () => {
+$('btnReport').onclick = async () => {
   const s = sim.summary();
+  const ai = await askAi('report', s);
   const rows = sim.events.filter((e) => e.kind !== 'tick').map((e) => `<tr><td>${e.t}s</td><td>${e.agent}</td><td>${esc(e.msg)}</td></tr>`).join('');
   const html = `<!doctype html><meta charset="utf-8"><title>Helix incident report</title><style>body{font:14px system-ui;margin:32px;max-width:900px}td,th{border-bottom:1px solid #ddd;padding:4px 8px;text-align:left;vertical-align:top}</style>
   <h1>Helix Command: incident report (simulation)</h1><p><b>Scenario:</b> ${sim.sc.label} · seed ${s.seed} · outcome <b>${s.outcome}</b> · ${s.t}s · battery ${s.startBattery}% → ${s.battery}% · harvested ${s.harvested}%</p>
   <p><b>Casualty:</b> ${s.weightKg} kg, ${s.age}, ${s.unclothed ? 'unclothed (covered: ' + s.covered + ')' : 'clothed'}, spinal flag ${s.spinal}. Health ${s.health}/100.</p>
   <p><b>Gate:</b> allowed ${s.gateStats.allowed}, blocked ${s.gateStats.blocked}, approvals ${s.gateStats.approvals} · injection attempts ${s.injection.attempts}, blocked ${s.injection.blocked} · audit chain valid: ${s.auditOk}</p>
-  <p><b>Reason:</b> ${esc(s.reason)}</p><h2>Timeline</h2><table><tr><th>Time</th><th>Agent</th><th>Event</th></tr>${rows}</table>
+  <p><b>Reason:</b> ${esc(s.reason)}</p><p><b>Summary (${ai.mode === 'llm' ? 'written by an AI model, advisory only' : 'standard summary'}):</b> ${esc(ai.text ?? '')}</p><h2>Timeline</h2><table><tr><th>Time</th><th>Agent</th><th>Event</th></tr>${rows}</table>
   <p style="color:#666">Simulation only. Prototype, not a certified rescue system. All data synthetic. Energy-harvest numbers are assumptions.</p>`;
   const w = window.open('', '_blank'); if (w) { w.document.write(html); w.document.close(); w.print?.(); }
 };
