@@ -18,6 +18,13 @@ LLM_MODEL      the model name
 LLM2_BASE_URL, LLM2_API_KEY, LLM2_MODEL   optional second provider, used if the first one fails
 ```
 
+## Baseten (Meta Muse Spark), the hackathon provider
+```
+LLM_BASE_URL = https://inference.baseten.co/v1
+LLM_MODEL    = meta-models/muse-spark-open-1026     (use exactly this name: the hackathon key only works with it)
+LLM_API_KEY  = <your key, set only in Vercel or your shell>
+```
+
 ## On Vercel
 Project, Settings, Environment Variables: add the names above (Production), then redeploy. The function is `api/llm.js`.
 

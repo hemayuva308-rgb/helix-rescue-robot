@@ -54,3 +54,10 @@ test('bad requests are refused', async () => {
   assert.equal((await handle('nope', {}, {})).status, 400);
   assert.equal((await handle('brief', { x: 'y'.repeat(20000) }, {})).status, 413);
 });
+
+test('reasoning text in <think> tags is removed from the answer', async () => {
+  const m = await mock('<think>the commander wants a brief, I should mention battery</think>Unit A is searching.');
+  const out = await handle('brief', { time: 5 }, { LLM_BASE_URL: m.url, LLM_API_KEY: 'k', LLM_MODEL: 'm' }, 'ip9');
+  m.srv.close();
+  assert.equal(out.body.text, 'Unit A is searching.');
+});

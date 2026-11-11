@@ -20,12 +20,13 @@ export function providers(env) {
   return list;
 }
 
-async function chat(p, messages, timeoutMs = 12000) {
+async function chat(p, messages, timeoutMs = 25000) {
   const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), timeoutMs);
   try {
-    const r = await fetch(`${p.base}/chat/completions`, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json', authorization: `Bearer ${p.key}` }, body: JSON.stringify({ model: p.model, messages, temperature: 0.2, max_tokens: 400 }) });
+    const r = await fetch(`${p.base}/chat/completions`, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json', authorization: `Bearer ${p.key}` }, body: JSON.stringify({ model: p.model, messages, temperature: 0.2, max_tokens: 900 }) });
     if (!r.ok) throw new Error(`provider ${p.name} status ${r.status}`);
-    const j = await r.json(); const text = j.choices?.[0]?.message?.content;
+    const j = await r.json(); let text = j.choices?.[0]?.message?.content;
+    if (typeof text === 'string') text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<\/?think>/gi, ''); // some models print their reasoning first
     if (typeof text !== 'string' || !text.trim()) throw new Error('empty answer');
     return text.trim();
   } finally { clearTimeout(t); }
