@@ -42,15 +42,43 @@ function camera() {
 function project(c, p) { const d = sub(p, c.eye); const z = dot(d, c.f); const s = 760 / z; return { x: cv.width / 2 + s * dot(d, c.r), y: cv.height / 2 - s * dot(d, c.u), z }; }
 const LIGHT = norm([0.4, -0.6, 0.9]);
 
-function casualtyFaces() {
-  // A 75 kg casualty lying across the forearms (drawn only for design review; not part of the URDF).
-  const faces = [];
-  const cx = 0.80, cz = 1.05, L = 0.70, W = 0.15, H = 0.09;
-  const v = [[cx - L, -W, cz - H], [cx + L, -W, cz - H], [cx + L, W, cz - H], [cx - L, W, cz - H], [cx - L, -W, cz + H], [cx + L, -W, cz + H], [cx + L, W, cz + H], [cx - L, W, cz + H]];
-  for (const f of [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6], [1, 2, 6, 5], [0, 3, 7, 4]]) faces.push({ pts: f.map((i) => v[i]), color: [0.48, 0.21, 0.32, 1] });
-  const b = [[cx - L + 0.1, -W - 0.01, cz + H], [cx + L - 0.4, -W - 0.01, cz + H], [cx + L - 0.4, W + 0.01, cz + H], [cx - L + 0.1, W + 0.01, cz + H]];
-  faces.push({ pts: b, color: [0.18, 0.42, 0.54, 1] });
+// --- Mannequin casualty (drawn only for design review; not part of the URDF) ---------------
+function limb(p0, p1, r0, r1, color, n = 8) {
+  const a = sub(p1, p0), len = Math.hypot(...a), d = a.map((x) => x / len);
+  const h = Math.abs(d[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
+  const u = norm(cross(d, h)), w = cross(d, u);
+  const ring = (p, r) => Array.from({ length: n }, (_, i) => { const t = (i / n) * 2 * Math.PI; return [0, 1, 2].map((k) => p[k] + r * (Math.cos(t) * u[k] + Math.sin(t) * w[k])); });
+  const A = ring(p0, r0), B = ring(p1, r1), faces = [];
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; faces.push({ pts: [A[i], A[j], B[j], B[i]], color }); }
+  faces.push({ pts: A, color }, { pts: B, color });
   return faces;
+}
+function blob(c, rx, ry, rz, color, nu = 10, nv = 6) {
+  const P = (i, j) => { const th = (i / nu) * 2 * Math.PI, ph = (j / nv) * Math.PI; return [c[0] + rx * Math.sin(ph) * Math.cos(th), c[1] + ry * Math.sin(ph) * Math.sin(th), c[2] + rz * Math.cos(ph)]; };
+  const faces = [];
+  for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) faces.push({ pts: [P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], color });
+  return faces;
+}
+function casualtyFaces() {
+  // Mannequin in a cradle carry: lying across both forearms, head to the robot's left, legs hanging to its right.
+  const SKIN = [0.88, 0.74, 0.62, 1], SHIRT = [0.93, 0.50, 0.18, 1], PANTS = [0.22, 0.28, 0.42, 1], HAIR = [0.16, 0.11, 0.08, 1], SHOE = [0.12, 0.12, 0.14, 1];
+  const x = 0.36, z = 1.33; // resting on top of the forearms (forearm centre ~ (0.34, ±0.22, 1.20))
+  const F = [];
+  F.push(...blob([x, 0.66, z + 0.01], 0.085, 0.10, 0.10, SKIN));            // head
+  F.push(...blob([x, 0.67, z + 0.05], 0.088, 0.10, 0.07, HAIR, 10, 3));    // hair cap
+  F.push(...limb([x, 0.54, z], [x, 0.60, z], 0.04, 0.035, SKIN, 6));       // neck
+  F.push(...limb([x, 0.50, z], [x, 0.04, z - 0.01], 0.13, 0.115, SHIRT));   // torso
+  F.push(...limb([x, 0.04, z - 0.01], [x, -0.10, z - 0.02], 0.115, 0.12, PANTS)); // hips
+  for (const s of [-1, 1]) {
+    const lx = x + s * 0.075;
+    F.push(...limb([lx, -0.10, z - 0.02], [lx, -0.50, z - 0.05], 0.08, 0.055, PANTS));          // thigh
+    F.push(...limb([lx, -0.50, z - 0.05], [lx + s * 0.01, -0.86, z - 0.17], 0.055, 0.04, PANTS)); // shin hanging slightly down
+    F.push(...limb([lx + s * 0.01, -0.86, z - 0.17], [lx + s * 0.01, -0.97, z - 0.19], 0.05, 0.045, SHOE)); // foot
+    const ax = x + s * 0.20;
+    F.push(...limb([ax, 0.46, z - 0.01], [ax + s * 0.02, 0.18, z - 0.09], 0.045, 0.04, SHIRT));  // upper arm
+    F.push(...limb([ax + s * 0.02, 0.18, z - 0.09], [ax + s * 0.03, -0.04, z - 0.20], 0.04, 0.032, SKIN)); // forearm hanging
+  }
+  return F;
 }
 
 function draw(t) {
