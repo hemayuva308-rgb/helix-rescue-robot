@@ -3,8 +3,10 @@ import { createLink, newCode } from '/web/link.js';
 import { makeHello, snapshot } from '/src/snapshot.js';
 
 export function initHost({ getScn, getSim, getCtx, onDeploy, onRestart, onPhone, onSolo, onStanding }) {
-  let code = null; try { code = sessionStorage.getItem('helixCode'); } catch (e) { /* ignore */ }
-  if (!code) { code = newCode(); try { sessionStorage.setItem('helixCode', code); } catch (e) { /* ignore */ } }
+  // the pairing code stays the same for this browser (until its site data is cleared), so a phone that remembers it keeps working
+  let code = null; try { code = localStorage.getItem('helixCode') || sessionStorage.getItem('helixCode'); } catch (e) { /* ignore */ }
+  if (!code || !/^[A-Z0-9]{6}$/.test(code)) code = newCode();
+  try { localStorage.setItem('helixCode', code); sessionStorage.setItem('helixCode', code); } catch (e) { /* ignore */ }
   const url = `${location.origin}/web/operator.html?pair=${code}`;
   const card = document.createElement('details'); card.className = 'card phone'; card.id = 'phoneCard';
   card.innerHTML = `<summary>Pair a phone as the operator's remote</summary>

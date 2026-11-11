@@ -142,7 +142,7 @@ function frame(ts) {
 
 // ---------------------------------------------------------------- pairing with the laptop
 function connect(c) {
-  code = cleanCode(c); if (code.length !== 6) { $('pairStat').textContent = 'The code has 6 letters or digits.'; return; }
+  code = cleanCode(c); try { localStorage.setItem('helixLastCode', code); } catch (e) { /* ignore */ } if (code.length !== 6) { $('pairStat').textContent = 'The code has 6 letters or digits.'; return; }
   if (link) link.close();
   mode = 'remote'; vm = null; hello = null; logN = 0; alarmSeen = 0; $('oLog').innerHTML = ''; document.body.classList.add('remote'); $('pairBox').style.display = 'none'; $('pairedBox').style.display = '';
   link = createLink({ role: 'phone', code, onStatus: (s) => { net = s; }, onMessage: (m, v) => {
@@ -209,3 +209,4 @@ if (q.get('scenario')) { $('inScn').value = q.get('scenario'); $('inSeed').value
 if (q.get('seed')) $('inSeed').value = q.get('seed'); if (q.get('speed')) $('inSpeed').value = q.get('speed'); if (q.get('weight')) $('inWeight').value = q.get('weight'); if (q.get('robots')) $('inRobots').value = q.get('robots'); if (q.get('count')) $('inCount').value = q.get('count'); if (q.get('animals')) $('inAnimals').value = q.get('animals');
 restartLocal(); requestAnimationFrame(frame);
 if (q.get('pair')) { $('inPair').value = cleanCode(q.get('pair')); connect(q.get('pair')); }
+else { try { const last = localStorage.getItem('helixLastCode'); if (last) $('inPair').value = last; } catch (e) { /* ignore */ } }
