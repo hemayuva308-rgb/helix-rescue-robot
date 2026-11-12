@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helix Command: answer helper</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#fff;color:#12306b}
+header{padding:14px 18px;border-bottom:1px solid #d3e0f7;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+h1{font-size:20px;margin:0}button{font:inherit;cursor:pointer}
+#mic{background:#12306b;color:#fff;border:0;border-radius:30px;padding:12px 22px;font-size:18px;font-weight:700}
+#mic.on{background:#c0262b}
+#state{font-size:15px;color:#3b6fd4;font-weight:600}
+main{max-width:980px;margin:0 auto;padding:16px 18px}
+#heard{color:#5a6e96;font-size:16px;min-height:24px;margin:6px 0}
+#card{background:#f3f7ff;border:2px solid #3b6fd4;border-radius:16px;padding:18px 22px;margin:8px 0}
+#qt{font-weight:700;color:#3b6fd4;font-size:16px;margin-bottom:8px}
+#ans{font-size:30px;line-height:1.4;color:#12306b}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.alt{background:#fff;border:1px solid #b9cdf3;border-radius:20px;padding:8px 14px;font-size:15px;color:#12306b}
+input{flex:1;min-width:200px;border:1px solid #b9cdf3;border-radius:10px;padding:10px 12px;font-size:16px}
+.go{background:#3b6fd4;color:#fff;border:0;border-radius:10px;padding:10px 16px;font-size:16px}
+h2{font-size:16px;margin:18px 0 6px;color:#3b6fd4}
+#all{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.q{background:#fff;border:1px solid #d3e0f7;border-radius:10px;padding:10px 12px;text-align:left;font-size:15px;color:#12306b}
+.q:hover{background:#eaf1ff}
+small{color:#5a6e96}
+</style></head><body>
+<header><h1>Helix Command · answer helper</h1><button id="mic">🎤 Start listening</button><span id="state">Mic is off</span></header>
+<main>
+<div id="heard"></div>
+<div id="card"><div id="qt">Ready</div><div id="ans">Tap the mic and put it near the speaker. When the judge asks a question, the answer will appear here. Read it slowly. You can also tap any question below.</div></div>
+<div class="row" id="alts"></div>
+<div class="row"><input id="typed" placeholder="Or type the question here"><button class="go" id="go">Find answer</button></div>
+<small>Works best in Chrome or Edge. Reading the answer is fine. The helper pauses listening while you read, then listens again.</small>
+<h2>All questions (tap one)</h2><div id="all"></div>
+</main>
+<script>
+const QA = [
+['Is there a real robot?',['real robot','physical','hardware','built the robot','prototype','actual robot','robot built'],"We built the brain first, in simulation. The robot body is designed as code, and real motors and sensors can plug in through one gated layer. The hardware build is our next step."],
+['Can a robot carry a person? How heavy?',['kilogram','kg','lift','carry','heavy','weight','payload','strong enough','how much'],"Yes, a robot can carry a person. It needs strong motors, about 140 newton metres per shoulder for a 75 kilogram person by our calculation, a stable low body, and a load sensor. For heavier people, two units lift together, up to 170 kilograms."],
+['How does it find people?',['detect','find people','sensor','locate','find the','how do you find','identify'],"It uses four sensors: a heat camera, a microphone, CO2 and radar. A person counts only when two different sensors agree. One sensor alone can be fooled by a hot object, so it is rejected."],
+['How does the safety gate work?',['gate','safety','rules','how does it work','block','safe','constraint'],"Every action goes to the safety gate first. It says allow, block, or ask a human. It checks weight, heat, water depth, battery and structure. It is plain code, not AI, so it cannot be tricked."],
+['Why not use an AI model to decide?',['llm','ai model','language model','why not ai','chatgpt','trick','why plain code','why not use ai'],"A language model can be tricked by text, so it never decides. In our tests, all 291 fake instructions were ignored. The AI only writes briefings and radio messages."],
+['Is it an AI agent?',['agent','agentic','autonomous','multi agent'],"Yes, it is an agentic system. Four agents and up to three units sense, verify, plan and act. Every action passes the gate, and lifts need a human. The planner uses rules on purpose, for safety."],
+['What problem do you solve?',['problem','solve','motivation','purpose','objective'],"Rescuers risk their lives in fires, floods, collapses and wells. A rescue robot needs a decision layer people can trust. Helix Command verifies detections, checks every action, and asks a human to approve lifts."],
+['What is new or different?',['new','different','unique','innovation','novel','special','compare','better than'],"The safety decisions are plain code, not an AI model. A person counts only when two sensors agree. Every decision is logged in a tamper-proof chain. And it works for four disasters in one design."],
+['Who will use it? What is the impact?',['who will use','users','customer','market','impact','beneficiar','audience','stakeholder'],"Fire and rescue teams, disaster response teams, and robot makers who need a safety and approval layer. It can help keep rescuers out of danger."],
+['What are your results?',['result','evaluation','accuracy','performance','numbers','metrics','measure','proof','evidence'],"We ran 100 random runs for each scenario. With the safety gate on, zero violations. With the gate off, 664 in fire, 681 in flood and 1,158 in collapse. All 291 fake instructions were blocked. 72 tests pass."],
+['Why not every casualty delivered?',['delivered','success rate','percent','half','58','49','56','fail to rescue','not rescued'],"In that test, casualties go up to 100 kilograms, and sometimes the commander does not answer. Then refusing is the correct safe outcome, and nobody was lost. With two units, fire reaches 92 percent and flood 98 percent."],
+['Is it only a simulation?',['simulation','simulated','fake','real data','real sensors','just a game','visual','demo only','is it real'],"Yes, simulation first, on purpose. The decision logic is real code with tests. That logic is what a rescue robot must get right before it moves. The simulator is how we prove it."],
+['How does the robot charge from water?',['charge','charging','turbine','energy','harvest','power','battery'],"A small sealed turbine trickle-charges the battery from flowing water. In our demo it gained about 5 percent, enough to finish the lift. It is a range extender, and the gate checks the energy plan first."],
+['What can it do in a flood?',['swim','flood','depth','current','drown','river','weir'],"It wades, then swims with flotation in up to two and a half metres of water, keeping the head above the surface. It tows people to the shore before the current takes them to the weir."],
+['What happens in a collapse?',['collapse','rubble','debris','crane','earthquake','building fell'],"The units listen for voices under the rubble. They clear blocks only within their lifting limit and only while the structure stays stable. Heavy slabs are flagged for a crane team."],
+['How does the well rescue work?',['well','borewell','shaft','pod','child fell','gas','methane','rope'],"The unit works a winch from the rim. It checks methane and oxygen first and ventilates with a fan. An adult gets a sling. A child gets a tethered rescue pod. Too deep or too narrow, it calls the rope team."],
+['What happens in a fire?',['fire','heat','temperature','smoke','burn','flame'],"The units search the rooms nearest the fire first. Each carries up to 90 kilograms alone, and two units can lift 170. Routes re-plan as the fire spreads. A casualty at the fire front is refused and the fire crew is called."],
+['Who approves the lifts?',['approve','approval','human in the loop','commander','medic','spinal','permission','authoris','authoriz'],"A human commander approves every lift. A suspected spinal injury needs a medic first. If the commander does not answer, the units hold and ask for help."],
+['What is the audit log?',['audit','log','hash','tamper','blockchain','record','traceab','accountab'],"Every decision is saved in a hash chain. If anyone changes an old entry, the chain breaks. The dashboard has a Verify button and a Tamper test button."],
+['How do several robots work together?',['multiple','units','fleet','several robots','together','hand over','triage','swarm','coordinate','team of robots'],"One to three units share the incident. They split the search, help the most critical people first, then animals. If a casualty is too heavy, two units lift together. If a battery is low, another unit takes over."],
+['What if something goes wrong?',['alarm','fail','failure','error','goes wrong','link lost','connection lost','is lost','lost','internet','wifi','disconnect','emergency','fallback','safe fail'],"A unit never fails silently. A flashing alarm with a beep names the help needed: a lifting crew, fire crew, divers, a crane or rope team. If the link drops, the units hold, and a unit carrying someone keeps going."],
+['How do the phone and laptop connect?',['phone','laptop','how do you connect','webrtc','operator','pairing','remote','control it','interface'],"The laptop runs the simulation and shows a pairing code and a QR. The phone enters the code and connects. The operator only taps DEPLOY, approves lifts, and can say come out."],
+['Did you use ROS 2 or Gazebo?',['ros','gazebo','urdf','physics','ros2','simulator'],"We made the project ROS 2 ready: a robot model, a physics model, and a Gazebo world with a plan. Running it in Gazebo is our next step."],
+['What parts would the real robot need?',['parts','components','motor','actuator','hardware ready','what do you need to build','bill of materials','materials'],"Strong geared motors, a stable base, a load sensor, a thermal camera, microphones, a CO2 and gas sensor, radar, a battery, heat shielding, and an emergency stop. The software already talks to them through one gated layer."],
+['What did you build before the event?',['before','commits','prior','started earlier','pre built','existing','already had','previous work','earlier'],"The git history is unmodified. Three commits on 10 November hold the core engine, the safety gate, the audit log and a first dashboard. Everything else was built during the 24 hours."],
+['Did you use AI to write the code?',['claude','copilot','generated','who wrote','write the code','ai assistant','vibe','ai written','ai generated','use ai'],"Yes, we used an AI coding assistant to build fast, and we say so in our submission. The design decisions are ours: the safety gate, two-sensor checks, human approval, and a clear scope."],
+['Who did what in the team?',['who did what','role','contribution','members','team work','your part','what did you do'],"[Say this in your own words: who did which part.] I worked on the project design, testing and presenting."],
+['What are the next steps?',['next step','future','more time','roadmap','what next','plans','scale','improve'],"First, run the robot model in ROS 2 and Gazebo. Then test detection on a real sensing rover. Then build the lift. Rescue experts will review the limits."],
+['What technology did you use?',['tech stack','technology','language','framework','built with','node','javascript','tools used','libraries','programming'],"Plain Node.js and HTML canvas with no dependencies, a URDF robot model, WebRTC for the phone link, and Meta Muse as an optional AI helper. It is deployed on Vercel, and the code is on GitHub."],
+['How do you keep the API key safe?',['api key','secret','security','privacy','safe your key','credential','keys'],"The key is only on the server, as an environment variable on Vercel. It is never in the repository or in the browser."],
+['What if the operator presses deploy by mistake?',['mistake','accident','by mistake','misuse','wrong button','operator error'],"Deploy only starts the search. Every lift still goes through the gate, a spinal injury still needs a medic, and the operator can say come out at any time."],
+['What if two sensors are both fooled?',['both fooled','false positive','wrong detection','sensor error','misdetect','false detection','noise'],"The gate and the human approval are still there. The unit also checks the real weight with a load sensor before carrying. Next, we want more sensor types and field tests."],
+['Is the code open? Can I run it?',['open source','run it','repository','github','download','reproduce','demo link','source code'],"Yes, the repository is public. Run node local-server.js. Use npm test for the 72 tests, and npm run eval to repeat the results."],
+['Anything to add? Closing',['anything else','anything to add','closing','final words','wrap up','last thing','add anything'],"We built the part that decides what a rescue robot is allowed to do, and we showed it in four disasters. The hardware build is the next chapter. Thank you."],
+['Introduction',['introduce','tell us about','about your project','pitch','explain your project','what is helix','overview','describe'],"Our project is Helix Command. It is a brain for rescue robots. A safety gate checks every action, and a human approves every lift. We show four disasters: fire, flood, collapse and well. Everything is simulation first."],
+['Can you repeat? Language',['repeat','slowly','did not understand','pardon','sorry'],"Sorry, my English is not very good. Could you please say the question again, slowly?"],
+];
+const $=id=>document.getElementById(id);
+const STOP=new Set(['the','a','an','is','are','do','does','you','your','it','of','to','in','and','what','how','can','will','on','for','this','that','with','have','has','did','we','i','be']);
+const norm=s=>s.toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+let current='',pausedUntil=0;
+function score(text){const t=' '+norm(text)+' ';return QA.map((e,i)=>{let s=0;for(const k of e[1]){if(t.includes(' '+k+' ')||t.includes(' '+k)&&k.length>4)s+=k.split(' ').length*2+k.length/10;}return[i,s];}).sort((a,b)=>b[1]-a[1]);}
+function show(i,heard){const e=QA[i];$('qt').textContent=e[0];$('ans').textContent=e[2];current=norm(e[2]);if(heard!==undefined)$('heard').textContent='Heard: "'+heard+'"';
+ const words=e[2].split(' ').length;pausedUntil=Date.now()+(words/2.0+2)*1000;}
+function answer(text){const r=score(text);if(r[0][1]<=0){$('heard').textContent='Heard: "'+text+'"';$('qt').textContent='I did not catch that';$('ans').textContent='Please ask again, slowly. You can say: "Sorry, could you repeat the question slowly?" Or tap a question below.';$('alts').innerHTML='';return;}
+ show(r[0][0],text);$('alts').innerHTML='';r.slice(1,4).filter(x=>x[1]>0).forEach(([i])=>{const b=document.createElement('button');b.className='alt';b.textContent='Or: '+QA[i][0];b.onclick=()=>show(i);$('alts').appendChild(b);});}
+$('all').innerHTML='';QA.forEach((e,i)=>{const b=document.createElement('button');b.className='q';b.textContent=e[0];b.onclick=()=>{$('alts').innerHTML='';show(i);window.scrollTo({top:0,behavior:'smooth'});};$('all').appendChild(b);});
+$('go').onclick=()=>{const v=$('typed').value.trim();if(v)answer(v);};$('typed').onkeydown=e=>{if(e.key==='Enter')$('go').click();};
+// speech recognition
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null,on=false;
+function overlap(a){const w=norm(a).split(' ').filter(x=>x.length>3);if(w.length<4)return false;const c=new Set(current.split(' '));return w.filter(x=>c.has(x)).length/w.length>0.5;}
+function start(){if(!SR){$('state').textContent='Speech not supported here. Use Chrome or Edge, or type / tap.';return;}
+ rec=new SR();rec.lang='en-IN';rec.continuous=true;rec.interimResults=false;
+ rec.onresult=ev=>{for(let k=ev.resultIndex;k<ev.results.length;k++){if(!ev.results[k].isFinal)continue;const txt=ev.results[k][0].transcript.trim();if(!txt)continue;
+   if(Date.now()<pausedUntil||overlap(txt)){$('state').textContent='Paused while you read';continue;}
+   $('state').textContent='Listening';answer(txt);}};
+ rec.onerror=e=>{$('state').textContent='Mic problem: '+e.error+' (allow the microphone)';};
+ rec.onend=()=>{if(on){try{rec.start();}catch(e){}}};
+ try{rec.start();on=true;$('mic').textContent='⏹ Stop listening';$('mic').classList.add('on');$('state').textContent='Listening';}catch(e){$('state').textContent='Could not start the mic';}}
+function stop(){on=false;try{rec&&rec.stop();}catch(e){}$('mic').textContent='🎤 Start listening';$('mic').classList.remove('on');$('state').textContent='Mic is off';}
+$('mic').onclick=()=>on?stop():start();
+</script></body></html>
